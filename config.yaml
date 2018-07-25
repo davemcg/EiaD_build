@@ -1,6 +1,6 @@
 sqlite_version: 'SQLite/3.22.0'
 salmon_version: 'salmon/0.11.0'
-sqlite_file: 'ref/SRAmetadb_072418.sqlite'
+sqlite_file: '/data/swamyvs/testClust/autoRNAseq/ref/SRAmetadb_072418.sqlite'
 sratoolkit_version: 'sratoolkit/2.9.2'
-ids: 'sraIDs'
+ids: '/data/swamyvs/testClust/autoRNAseq/srsIDs'
 refFasta_url: 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_26/gencode.v26.transcripts.fa.gz'
