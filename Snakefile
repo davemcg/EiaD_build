@@ -66,10 +66,12 @@ rule all:
 rule download_fastqs:
     output:'fastq_files/{srs}.fastq'
     run:
+        shell("module load {config[sqlite_version]}")
+        shell("module load {config[sratoolkit_version]}")
         with open(config['ids'],'r') as ids:
             for srs_id in ids:
                 srs_id=srs_id.strip('\n')
-                command='sqlite3 ref/SRAmetadb_072418.sqlite "SELECT run_accession FROM sra WHERE sample_accession=\'{}\'"'.format(srs_id)
+                command='sqlite3 ' + config['sqlite_file'] + ' "SELECT run_accession FROM sra WHERE sample_accession=\'{}\'"'.format(srs_id)
                 run_ids=sp.check_output(command, shell=True).decode('utf-8').strip("'|\n").split('\n')# outputs a list of run_ids
                 for run in run_ids:# download all runs
                     sp.run("fastq-dump -X 5 -Z {}  > {}.{}.fqp ".format(run,srs_id,run),shell=True)#***REMOVE -X 5***
