@@ -65,23 +65,22 @@ rule all:
     input:
         expand("quant_files/{sraids}/quant.sf",sraids=SRA_IDS),
         'ref/gencodeRef.fa.gz',
-        directory(salmonindex)
+        salmonindex
 #download files using
 rule download_fastqs:
     output:'fastq_files/{srs}.fastq'
+    params:srs=SRA_IDS
     run:
         loadSql="module load {} && ".format(config['sqlite_version'])
         loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
-        with open(config['ids'],'r') as ids:
-            for srs_id in ids:
-                srs_id=srs_id.strip('\n')
-                command=loadSql + 'sqlite3 ' + config['sqlite_file'] + ' "SELECT run_accession FROM sra WHERE sample_accession=\'{}\'"'.format(srs_id)
-                run_ids=sp.check_output(command, shell=True).decode('utf-8').strip("'|\n").split('\n')# outputs a list of run_ids
-                for run in run_ids:# download all runs
-                    sp.run(loadSRAtk + "fastq-dump -X 5 -Z {}  > {}.{}.fqp ".format(run,srs_id,run),shell=True)#***REMOVE -X 5***
-                sp.run('cat {}* > fastq_files/{}.fastq'.format(srs_id,srs_id),shell=True)
-                sp.run('rm *.fqp',shell=True)
-# rule bam_to_fastq:
+        srs_id=wildcards.srs
+        command=loadSql + 'sqlite3 ' + config['sqlite_file'] + ' "SELECT run_accession FROM sra WHERE sample_accession=\'{}\'"'.format(srs_id)
+        run_ids=sp.check_output(command, shell=True).decode('utf-8').strip("'|\n").split('\n')# outputs a list of run_ids
+        for run in run_ids:# download all runs
+            sp.run(loadSRAtk + "fastq-dump -X 5 -Z {}  > {}.{}.fqp ".format(run,srs_id,run),shell=True)#***REMOVE -X 5***
+        sp.run('cat {}* > fastq_files/{}.fastq'.format(srs_id,srs_id),shell=True)
+        sp.run('rm *.fqp',shell=True)
+# rule bam_to_fastq
 #     input:[config['bam_path']+bamname for bamname in bam_files ]
 #     output:['fastq_files/'+bamname+'fastq' for bamname in bam_files]
 #     run:
@@ -92,7 +91,7 @@ rule download_fastqs:
 #might add webaddress and salmonindex same as config arguments
 loadSalmon= "module load {} && ".format(config['salmon_version'])
 rule build_salmon_index:
-    output:['ref/gencodeRef.fa.gz',directory(salmonindex)]
+    output:['ref/gencodeRef.fa.gz',salmonindex]
     run:
         print('running index download')
         sp.run('wget -O ref/gencodeRef.fa.gz -nc {}'.format(config['refFasta_url']),shell=True)
@@ -110,7 +109,7 @@ if not os.path.exists('logs'):
     sp.run('mkdir logs; touch logs/failed_mapping.log', shell=True)
 
 rule run_salmon_SRA:
-    input:"fastq_files/{sraid}.fastq",directory(salmonindex)
+    input:"fastq_files/{sraid}.fastq",salmonindex
     output:"quant_files/{sraid}/quant.sf"
     run:
         pairedFlag=isFastqPaired("fastq_files/" + wildcards.sraid + '.fastq')
@@ -137,3 +136,4 @@ rule run_salmon_SRA:
 #         if mappingscore <= 50:
 #             with open(log,'a') as logFile:
 #                 logFile.write('Sample {} failed QC mapping Percentage: {}'.format(wildcards.bam_fastqs,mappingscore))
+
