@@ -11,5 +11,5 @@
 	"run_salmon_SRA" :
 	{
 		"mem" : "16g"
-	},
+	}
 }
