@@ -1,0 +1,5 @@
+sqlite_version: 'SQLite/3.22.0'
+salmon_version: 'salmon/0.11.0'
+sqlite_file: 'ref/SRAmetadb_072418.sqlite'
+sratoolkit_version: 'sratoolkit/2.9.2'
+

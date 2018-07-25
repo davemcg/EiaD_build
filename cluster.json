@@ -1,0 +1,15 @@
+{
+	"__default__" :
+	{
+		"partition" : "quick",
+		"time" : "4:00:00",
+		"mem" : "8g",
+		"output"  : "00log/{rule}_{wildcards}.out",
+		"error" : "00log/{rule}_{wildcards}.err",
+		"extra" : ""
+	},
+	"run_salmon_SRA" :
+	{
+		"mem" : "16g"
+	},
+}
