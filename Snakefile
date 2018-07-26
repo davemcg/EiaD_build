@@ -18,35 +18,11 @@ config file:
 '''
 #adapted from https://www.biostars.org/p/139422/
 #for paired end data, it will have 8 lines for 1 spot entry as per SRA format
-def isPaired(filename):
-    # this makes me sad but it works
-    tmp=open('tmp.txt','w+')
-    k= sp.run(["fastq-dump","-X","1","-Z","--split-spot", str(filename)],stdout=tmp)
-    #        contents =
-    tmp.close()
-    tmp=open('tmp.txt','r')
-    count=0
-    for line in tmp:
-        count+=1
-    tmp.close()
-    print(count)
-    if count==4:
-
-        return("-r")
-    else:
-        return("-2")
-#new
-def isFastqPaired(filename):
-    with open(filename) as fastq:
-        head=[next(fastq).split(' ')[0] for x in range(8)]
-    first=head[0]
-    head.pop(0)
-    if first in head:
-        # if the same spot is present twice must be paired end
-        return('-2')
-    else:
-        return('-r')
-#open file with all ids
+def isPaired(fileDir):
+    numFile=int(sp.check_output('ls -1q {} | wc -l'.format(fileDir),shell=True).decode('utf-8'))# search for number of files matched to this run
+    paired= True if numFile > 1 else False
+    return paired
+#
 
 configfile:'config.yaml'
 
@@ -68,18 +44,26 @@ rule all:
         salmonindex
 #download files using
 rule download_fastqs:
-    output:'fastq_files/{srs}.fastq'
+    output:'fastq_files/{srs}'# directory containing out fastq files.
     params:srs=SRA_IDS
     run:
+        sp.run('mkdir -p {}'.format(output),shell=True)
         loadSql="module load {} && ".format(config['sqlite_version'])
         loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
         srs_id=wildcards.srs
         command=loadSql + 'sqlite3 ' + config['sqlite_file'] + ' "SELECT run_accession FROM sra WHERE sample_accession=\'{}\'"'.format(srs_id)
         run_ids=sp.check_output(command, shell=True).decode('utf-8').strip("'|\n").split('\n')# outputs a list of run_ids
         for run in run_ids:# download all runs
-            sp.run(loadSRAtk + "fastq-dump -X 5 -Z {}  > {}.{}.fqp ".format(run,srs_id,run),shell=True)#***REMOVE -X 5***
-        sp.run('cat {}* > fastq_files/{}.fastq'.format(srs_id,srs_id),shell=True)
-        sp.run('rm *.fqp',shell=True)
+            sp.run(loadSRAtk + "fastq-dump -X 5 --split-3 {}".format(run),shell=True)#***REMOVE -X 5***
+            numFile=int(sp.check_output('ls -1q {}* | wc -l'.format(run),shell=True).decode('utf-8'))# search for number of files matched to this run
+            paired= True if numFile > 1 else False# might be a problem if an accession is paired in one run and not the othert, but that doesnt seem possibel
+        if paired:
+            sp.run('cat *_1.fastq > fastq_files/{}/{}_1.fastq'.format(srs_id,srs_id),shell=True)
+            sp.run('cat *_2.fastq > fastq_files/{}/{}_2.fastq'.format(srs_id,srs_id),shell=True)
+            sp.run('rm *.fastq',shell=True)
+        else:
+            sp.run('cat *.fastq > fastq_files/{}/{}_1.fastq'.format(srs_id,srs_id),shell=True)
+            sp.run('rm *.fastq',shell=True)
 # rule bam_to_fastq
 #     input:[config['bam_path']+bamname for bamname in bam_files ]
 #     output:['fastq_files/'+bamname+'fastq' for bamname in bam_files]
@@ -106,21 +90,26 @@ rule build_salmon_index:
 # snakemake requires multiple log files if you use wildcards
 if not os.path.exists('logs'):
     log="logs/failed_mapping.log"
-    sp.run('mkdir logs; touch logs/failed_mapping.log', shell=True)
+    sp.run('mkdir -p logs; touch logs/failed_mapping.log', shell=True)
 
 rule run_salmon_SRA:
-    input:"fastq_files/{sraid}.fastq",salmonindex
+    input:"fastq_files/{sraid}",salmonindex # changed to directory containing fastqs
     output:"quant_files/{sraid}/quant.sf"
     run:
-        pairedFlag=isFastqPaired("fastq_files/" + wildcards.sraid + '.fastq')
-        salmon_command=loadSalmon + 'salmon quant -i {} -l A  {} {} -o quant_files/{}'.format(input[1], pairedFlag,input[0],wildcards.sraid)
+        id=wildcards.sraid
+        path="fastq_files/{}/{}".format(id,id)
+        paired=isPaired(input)
+        if paired:
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A -1 {}_1.fastq -2 {}_2.fastq -o quant_files/{}'.format(input[1],path,path,id)
+        else:
+            salmon_command=loadSalmon + 'salmon quant -i {index} -l A -r {}.fastq -o quant_files/{}'.format(input[1],id,id)
         sp.run(salmon_command,shell=True)
-        with open('quant_files/{}/aux_info/meta_info.json'.format(wildcards.sraid)) as file:
+        with open('quant_files/{}/aux_info/meta_info.json'.format(id)) as file:
             salmonLog=json.load(file)
             mappingscore=salmonLog["percent_mapped"]
         if mappingscore <= 50:
             with open(log,'a') as logFile:
-                logFile.write('Sample {} failed QC mapping Percentage: {}'.format(wildcards.sraid,mappingscore))
+                logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
 #need data to test this on
 
 # rule run_salmon_BAMS:
