@@ -13,15 +13,17 @@ def readSampleFile(samplefile):
             res[info[0]]={'files':info[1].split(','),'paired':True if info[2]=='y' else False}
     return(res)
 
-def lookupRfromID(card,sample_dict):
-    id= card[:-2] if '_' in card else card
+def lookupRunfromID(card,sample_dict):
+    id=card
+    if '_' in id:
+        i= '1' if id[-1]=='1' else '2'# check L/R file
+        id=card[:-2]
     fqpfiles=sample_dict[id]['files']
     res=[]
     for file in fqpfiles:
         if sample_dict[id]['paired']:
             #PE
-            res.append('fastqParts/{}_1.fastq.gz'.format(file))
-            res.append('fastqParts/{}_2.fastq.gz'.format(file))
+            res.append('fastqParts/{}_{}.fastq.gz'.format(file,i))
         else:
             #SE
             res.append('fastqParts/{}.fastq.gz'.format(file))
@@ -53,27 +55,24 @@ rule getFQP:
     output: 'fastqParts/{id}.fastq.gz'
     run:
         id=wildcards.id
-        id=id[:-2] if '_'in id else id #idididid
+        id=id[:-2] if '_'in id else id 
         sp.run(loadSRAtk + 'fastq-dump -X 5 --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
-        #todo: update sample dict
+
 
 rule aggFastqsPE:
-    input:lambda wildcards:lookupRfromID(wildcards.sampleID,sample_dict)
+    input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
     output:'fastq_files/{sampleID}.fastq.gz'
     run:
-        '''
-        In the case of paired end reads, WC_1 and WC_2 will both be passed,
-
-        '''
-
+        #this can use some cleaning up
         id=wildcards.sampleID
-        id=id[:-2] if '_'in id else id #idididid
-        fileParts=sample_dict[id]['files']
+        fileParts=lookupRunfromID(id,sample_dict)
+        i='1' if '_' in id and id[-1]=='1' else '2'# which strand
+        id=id[:-2] if '_' in id else id
         for fqp in fileParts:
             if sample_dict[id]['paired']:
-                sp.run('cat fastqParts/{fqp}_1.fastq.gz >> fastq_files/{id}_1.fastq.gz && cat fastqParts/{fqp}_2.fastq.gz >> fastq_files/{id}_2.fastq.gz '.format(fqp=fqp,id=id),shell=True)
+                sp.run('cat {fqp} >> fastq_files/{id}_{i}.fastq.gz '.format(fqp=fqp,i=i,id=id),shell=True)
             else:
-                sp.run('cat fastqParts/{fqp}.fastq.gz >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
+                sp.run('cat {fqp} >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
 
 rule build_salmon_index:
     output:['ref/gencodeRef.fa.gz',salmonindex]
