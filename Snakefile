@@ -37,13 +37,13 @@ loadSalmon= "module load {} && ".format(config['salmon_version'])
 rule all:
     input: expand('quant_files/{sampleID}/quant.sf', sampleID=sample_names),
             'ref/gencodeRef.fa.gz',
-            salmonindex,'logs/quant.log'
+            salmonindex
 rule getFQP:
     output: temp('fastqParts/{id}.fastq.gz')
     run:
         id=wildcards.id
         id=id[:-2] if '_'in id else id #idididid
-        sp.run(loadSRAtk + 'fastq-dump --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
+        sp.run(loadSRAtk + 'fastq-dump  --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
 rule aggFastqsPE:
     input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
     output:temp('fastq_files/{sampleID}.fastq.gz')
@@ -84,3 +84,5 @@ rule run_salmon:
         if mappingscore <= 50:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
+
+
