@@ -43,7 +43,7 @@ rule getFQP:
     run:
         id=wildcards.id
         id=id[:-2] if '_'in id else id #idididid
-        sp.run(loadSRAtk + 'fastq-dump -X 5 --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
+        sp.run(loadSRAtk + 'fastq-dump --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
 rule aggFastqsPE:
     input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
     output:temp('fastq_files/{sampleID}.fastq.gz')
