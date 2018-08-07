@@ -50,3 +50,4 @@ total_samples_left_minus_1 <- (ncol(tx_c)-3)
 table(low_usage[low_usage>total_samples_left_minus_1])
 
 tx_ids_to_keep <- gene_sum_tx[low_usage<total_samples_left_minus_1+1,] %>% .[['Transcript.ID']]
+print(tx_ids_to_keep)
