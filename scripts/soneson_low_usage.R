@@ -21,7 +21,7 @@ gtf <- readGFF('ref/gencodeAno.gtf',tags = c('gene_id','gene_name','transcript_i
 anno <-  gtf[complete.cases(gtf),]
 
 # pull counts
-txi <- tximport(files, type = "salmon", tx2gene = anno[,2:3], reader = read_tsv, txOut = T)
+txi <- tximport(files, type = "salmon", tx2gene = anno[,2:3],  txOut = T)
 
 # get counts
 tx_c <- data.frame(txi$counts)
