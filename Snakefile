@@ -88,7 +88,7 @@ rule build_salmon_index:
     input: ref_fasta
     output:salmonindex
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} -i {} --type quasi -k 31'.format(ref_fasta,salmonindex)
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(ref_fasta,salmonindex)
         sp.run(salmonindexcommand, shell=True)
 # rule build_STARindex:
 #     input: ref_PA, ref_GTF
@@ -126,4 +126,3 @@ rule run_salmon:
         if mappingscore <= 50:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
-
