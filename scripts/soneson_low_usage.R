@@ -14,7 +14,7 @@ working_dir <- '/data/swamyvs/autoRNAseq'
 setwd(working_dir)
 
 # pull in salmon files
-files <- list.files(path='quant_files',recursive=TRUE,pattern='quant.sf')
+files <-paste0('quant_files/',list.files(path='quant_files',recursive=TRUE,pattern='quant.sf'))
 
 # Gene TX to name conversion
 gtf <- readGFF('ref/gencodeAno.gtf',tags = c('gene_id','gene_name','transcript_id'))[,c('gene_id','gene_name','transcript_id')]
