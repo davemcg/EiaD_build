@@ -3,51 +3,34 @@ library(data.table)
 library(dplyr)
 library(readr)
 library(rtracklayer)
-
 # sonnesson 2016 inspired ID of low-usage tx
 # http://biorxiv.org/content/early/2015/08/24/025387
-
 # working dir, biowulf2
-
-working_dir <- '/data/swamyvs/autoRNAseq'
-
+#working_dir <- '/data/swamyvs/autoRNAseq'\
+working_dir <- '~/NIH/autoRNAseq'
 setwd(working_dir)
-
 # pull in salmon files
 files <-paste0('quant_files/',list.files(path='quant_files',recursive=TRUE,pattern='quant.sf'))
-
 # Gene TX to name conversion
-gtf <- readGFF('ref/gencodeAno.gtf',tags = c('gene_id','gene_name','transcript_id'))[,c('gene_id','gene_name','transcript_id')]
-anno <-  gtf[complete.cases(gtf),]
-
+gtf <- readGFF('ref/gencodeAno.gtf')%>%filter(type=='transcript')
+anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 # pull counts
-txi <- tximport(files, type = "salmon", tx2gene = anno[,2:3],  txOut = T)
-
+txi <- tximport(files, type = "salmon", tx2gene = anno[,3:2],  txOut = T)
 # get counts
 tx_c <- data.frame(txi$counts)
-
 # remove samples with low median counts
-sample_medians <- apply(tx_c[,2:ncol(tx_c)],2,function(x) median(x))
+sample_medians <- apply(tx_c,2,function(x) median(x))
 # remove all with 0 median
-samples_to_keep <- names(sample_medians[sample_medians>0])
-tx_temp <- tx_c %>% select_(.dots = samples_to_keep)
-tx_c <- cbind(tx_c[,1:2],tx_temp)
-
+samples_to_keep <- which(sample_medians>0)
+tx_c <- tx_c[,samples_to_keep]
 # get gene name added
-tx_c <- merge(data.frame(anno),tx_c,by.x='Transcript.ID',by.y='row.names')
-# group by gene and sum counts by gene
-gene_sums <- tx_c %>% group_by(Gene.Name) %>% summarise_each(funs(sum), 3:ncol(tx_c))
-# add tx name back
-gene_sum_tx <- tx_c %>% select(Transcript.ID, Gene.Name) %>% left_join(., gene_sums)
-# matrix divide to get ratio
-all_ratios <- tx_c[,3:ncol(tx_c)]/gene_sum_tx[,3:ncol(gene_sum_tx)]
-# find number of samples for each transcripts which are < 10% of the total
-low_usage <- apply(all_ratios,1, function(x) sum(x<0.05,na.rm=T))
-# summary
-summary(low_usage)
-# num with all samples have < 10% tx usage
-total_samples_left_minus_1 <- (ncol(tx_c)-3)
-table(low_usage[low_usage>total_samples_left_minus_1])
-
-tx_ids_to_keep <- gene_sum_tx[low_usage<total_samples_left_minus_1+1,] %>% .[['Transcript.ID']]
-print(tx_ids_to_keep)
+tx_c <- merge(anno,tx_c, by.x='transcript_id',by.y='row.names')
+#  sum counts by gene for all samples and calculate tx usage ratio
+gene_sums <- summarizeToGene(txi = txi,tx2gene = anno[,3:2])$counts[,samples_to_keep]
+all_ratios<- t(apply(tx_c,1,function(x) as.numeric(x[4:ncol(tx_c)])/sum(gene_sums[x[3],])))
+all_ratios[is.nan(all_ratios)] <- 0
+# find number of samples for each transcripts which are < 5% of the total
+low_usage <- which(rowSums(all_ratios)<=.05)
+print(paste(length(low_usage), 'Transcripts Removed'))
+tx_to_remove <- tx_c[low_usage,'transcript_id']
+write(tx_to_remove,'tx_for_removal',sep='\n')
