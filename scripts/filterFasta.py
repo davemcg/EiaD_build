@@ -1,6 +1,8 @@
-with open('infile') as infasta, open('filter') as crit, open('out.fa','w+') as outfasta:
-    names=[line.strip() for line in crit]
-    oldline=infasta.readline().strip()
+with open('ref/gencodeRef.fa') as infasta, open('tx_for_removal') as bad_tx, open('ref/gencodeRef_trimmed.fa','w+') as outfasta:
+    names=set()
+    for line in bad_tx:
+        names.add('>'+line.strip())
+    oldline=infasta.readline().strip().split('|')[0]
     while oldline:
         if oldline not in names and '>' in oldline:
             write=True
@@ -8,4 +10,4 @@ with open('infile') as infasta, open('filter') as crit, open('out.fa','w+') as o
             write=False
         if write:
             outfasta.write(oldline+'\n')
-        oldline=infasta.readline().strip()
+        oldline=infasta.readline().strip().strip().split('|')[0]
