@@ -31,7 +31,7 @@ gene_sums <- summarizeToGene(txi = txi,tx2gene = anno[,3:2])$counts[,samples_to_
 gene_sums_tx <- merge(tx_c[,1:3], as.data.frame(gene_sums), by.x='gene_name', all.x=T, by.y='row.names' )
 tx_c <- dplyr::arrange(tx_c,gene_name)
 all_ratios <- tx_c[,-(1:3)]/gene_sums_tx$gene_sums
-all_ratios[is.nan(all_ratios)] <- 0
+all_ratios[is.nan(as.matrix(all_ratios))] <- 0
 # find number of samples for each transcripts which are < 5% of the total
 low_usage <- which(rowSums(all_ratios)<=.05)
 print(paste(length(low_usage), 'Transcripts Removed'))
