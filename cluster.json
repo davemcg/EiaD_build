@@ -8,7 +8,7 @@
 		"error" : "00log/{rule}_{wildcards}.err",
 		"extra" : ""
 	},
-	"run_salmon_SRA" :
+	"run_salmon" :
 	{
 		"mem" : "16g"
 	}
