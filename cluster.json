@@ -11,5 +11,15 @@
 	"run_salmon" :
 	{
 		"mem" : "16g"
+	},
+	"find_tx_low_usage":
+	{
+		"mem" : "24g"
+	},
+	"reQuantify_Salmon" :
+	{
+		"mem" : "16g"
 	}
+
 }
+
