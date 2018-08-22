@@ -24,6 +24,6 @@ snakemake -s $snakefile \
 -pr --local-cores 2 --jobs 1999 \
 --configfile $config_yaml \
 --cluster-config $cluster_json \
---cluster "$sbcmd"  --latency-wait 120 --rerun-incomplete \
--k --restart-times 2
+--cluster "$sbcmd"  --latency-wait 120  \
+-k --restart-times 0
 
