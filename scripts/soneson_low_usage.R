@@ -6,8 +6,8 @@ library(rtracklayer)
 # sonnesson 2016 inspired ID of low-usage tx
 # http://biorxiv.org/content/early/2015/08/24/025387
 # working dir, biowulf2
-#working_dir <- '/data/swamyvs/autoRNAseq'\
-working_dir <- '~/NIH/autoRNAseq'
+working_dir <- '/data/swamyvs/autoRNAseq'
+#working_dir <- '~/NIH/autoRNAseq'
 setwd(working_dir)
 # pull in salmon files
 files <-paste0('quant_files/',list.files(path='quant_files',recursive=TRUE,pattern='quant.sf'))
