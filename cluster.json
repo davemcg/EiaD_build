@@ -6,7 +6,8 @@
 		"mem" : "8g",
 		"output"  : "00log/{rule}_{wildcards}.out",
 		"error" : "00log/{rule}_{wildcards}.err",
-		"extra" : ""
+		"extra" : "",
+		"name" : "{rule}.job"
 	},
 	"run_salmon" :
 	{
@@ -19,6 +20,28 @@
 	"reQuantify_Salmon" :
 	{
 		"mem" : "16g"
+	},
+	"build_STARindex" :
+	{
+		"partition" : "norm",
+		"time" : "8:00:00",
+		"mem" : "48g",
+		"output"  : "00log/{rule}_{wildcards}.out",
+		"error" : "00log/{rule}_{wildcards}.err",
+		"extra" : ""
+	},
+	"runrMATS" :
+	{
+		"partition" : "norm",
+		"time" : "12:00:00",
+		"mem" : "48g",
+		"output"  : "00log/{rule}_{wildcards}.out",
+		"error" : "00log/{rule}_{wildcards}.err",
+		"extra" : ""
+	},
+	"quality_control" :
+	{
+		"mem" : "24g"
 	}
 
 }
