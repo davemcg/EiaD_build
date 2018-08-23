@@ -1,5 +1,4 @@
 SRS085183	SRR060734	y	Retina	Retina_Adult Tissue	Adult Tissue
-SRS1036235	SRR2166420	y	Blood	 Cells - EBV-transformed lymphocytes 	Tissue
 SRS1036274	SRR2166708	y	Pancreas	 Pancreas 	Tissue
 SRS1054265	SRR2166357	n	RPE	RPE_Stem Cell Line	Stem Cell Line
 SRS1054266	SRR2166265	n	RPE	RPE_Stem Cell Line	Stem Cell Line
@@ -15,7 +14,6 @@ SRS1509093	SRR3677550,SRR3677551	y	RPE	RPE_Cell Line	Cell Line
 SRS1509094	SRR3677552,SRR3677553	y	RPE	RPE_Cell Line	Cell Line
 SRS1509095	SRR3677555,SRR3677554	y	RPE	RPE_Cell Line	Cell Line
 SRS1509096	SRR3677557,SRR3677556	y	RPE	RPE_Cell Line	Cell Line
-SRS1509097	SRR3677559,SRR3677558	y	RPE	RPE_Cell Line	Cell Line
 SRS1572423	SRR3933199	y	ESC	ESC_Stem Cell Line	Stem Cell Line
 SRS1572424	SRR3933200	y	ESC	ESC_Stem Cell Line	Stem Cell Line
 SRS1572425	SRR3933201	y	ESC	ESC_Stem Cell Line	Stem Cell Line
@@ -53,10 +51,6 @@ SRS1597879	SRR3994696	y	Retina	Retina_Adult Tissue	Adult Tissue
 SRS1597880	SRR3994697	y	Retina	Retina_Adult Tissue	Adult Tissue
 SRS1597881	SRR3994698	y	Retina	Retina_Adult Tissue	Adult Tissue
 SRS1597882	SRR3994699	y	Retina	Retina_Adult Tissue	Adult Tissue
-SRS1747723	SRR4425263,SRR4425262	y	ESC	ESC_Stem Cell Line	Stem Cell Line
-SRS1747747	SRR4425265,SRR4425264	y	Lens	Lens_Stem Cell Line	Stem Cell Line
-SRS1747748	SRR4425267,SRR4425266	y	Lens	Lens_Stem Cell Line	Stem Cell Line
-SRS1747749	SRR4425269,SRR4425268	y	Lens	Lens_Stem Cell Line	Stem Cell Line
 SRS302236	SRR447137	n	RPE	RPE_Fetal Tissue	Fetal Tissue
 SRS302237	SRR447138	n	RPE	RPE_Fetal Tissue	Fetal Tissue
 SRS302238	SRR447139	n	RPE	RPE_Stem Cell Line	Stem Cell Line
@@ -330,20 +324,15 @@ SRS523900	SRR1067999	y	RPE	RPE_Adult Tissue	Adult Tissue
 SRS523901	SRR1068000	y	Retina	Retina_Adult Tissue	Adult Tissue
 SRS523902	SRR1068136	y	RPE	RPE_Adult Tissue	Adult Tissue
 SRS524203	SRR1068953	y	Stomach	 Stomach 	Tissue
-SRS524218	SRR1069303	y	Spleen	 Spleen 	Tissue
-SRS524225	SRR1069445	y	Skin	 Cells - Transformed fibroblasts 	Tissue
-SRS524233	SRR1069638	y	Adipose Tissue	 Adipose - Visceral (Omentum) 	Tissue
 SRS524256	SRR1070184	y	Adipose Tissue	 Adipose - Subcutaneous 	Tissue
 SRS524280	SRR1070764	y	Pancreas	 Pancreas 	Tissue
 SRS524287	SRR1070913	y	Adrenal Gland	 Adrenal Gland 	Tissue
-SRS524320	SRR1071568	y	Lung	 Lung 	Tissue
 SRS524324	SRR1071668	y	Liver	 Liver 	Tissue
 SRS524328	SRR1071761	y	Stomach	 Stomach 	Tissue
 SRS524335	SRR1071931	y	Blood	 Whole Blood 	Tissue
 SRS524387	SRR1073217	y	Colon	 Colon - Transverse 	Tissue
 SRS524398	SRR1073459	y	Stomach	 Stomach 	Tissue
 SRS524429	SRR1074289	y	Skin	 Skin - Not Sun Exposed (Suprapubic) 	Tissue
-SRS524440	SRR1074526	y	Spleen	 Spleen 	Tissue
 SRS524460	SRR1075004	y	Esophagus	 Esophagus - Muscularis 	Tissue
 SRS524467	SRR1075174	y	Pancreas	 Pancreas 	Tissue
 SRS524468	SRR1075198	y	Spleen	 Spleen 	Tissue
@@ -353,23 +342,18 @@ SRS524478	SRR1075433	y	Brain	 Brain - Caudate (basal ganglia) 	Tissue
 SRS524479	SRR1075458	y	Esophagus	 Esophagus - Mucosa 	Tissue
 SRS524503	SRR1075729	y	Colon	 Colon - Transverse 	Tissue
 SRS524504	SRR1075752	y	Skin	 Cells - Transformed fibroblasts 	Tissue
-SRS524506	SRR1075825	y	Nerve	 Nerve - Tibial 	Tissue
 SRS524515	SRR1076022	y	Liver	 Liver 	Tissue
-SRS524516	SRR1076046	y	Small Intestine	 Small Intestine - Terminal Ileum 	Tissue
 SRS524523	SRR1076219	y	Breast	 Breast - Mammary Tissue 	Tissue
-SRS524534	SRR1076441	y	Breast	 Breast - Mammary Tissue 	Tissue
 SRS524543	SRR1076657	y	Skin	 Cells - Transformed fibroblasts 	Tissue
 SRS524549	SRR1076801	y	Esophagus	 Esophagus - Mucosa 	Tissue
 SRS524554	SRR1076916	y	Blood Vessel	 Artery - Coronary 	Tissue
 SRS524577	SRR1077405	y	Brain	 Brain - Frontal Cortex (BA9) 	Tissue
 SRS524584	SRR1077575	y	Esophagus	 Esophagus - Muscularis 	Tissue
-SRS524586	SRR1077619	y	Esophagus	 Esophagus - Mucosa 	Tissue
 SRS524589	SRR1077687	y	Brain	 Brain - Amygdala 	Tissue
 SRS524614	SRR1078258	y	Breast	 Breast - Mammary Tissue 	Tissue
 SRS524620	SRR1078392	y	Salivary Gland	 Minor Salivary Gland 	Tissue
 SRS524627	SRR1078562	y	Esophagus	 Esophagus - Muscularis 	Tissue
 SRS524636	SRR1078783	y	Esophagus	 Esophagus - Muscularis 	Tissue
-SRS524645	SRR1078998	y	Skin	 Cells - Transformed fibroblasts 	Tissue
 SRS524653	SRR1079189	y	Blood Vessel	 Artery - Coronary 	Tissue
 SRS524656	SRR1079259	y	Blood	 Whole Blood 	Tissue
 SRS524666	SRR1079480	y	Esophagus	 Esophagus - Muscularis 	Tissue
@@ -385,13 +369,10 @@ SRS524725	SRR1080835	y	Brain	 Brain - Hypothalamus 	Tissue
 SRS524762	SRR1081712	y	Blood	 Whole Blood 	Tissue
 SRS524804	SRR1082544	y	Pancreas	 Pancreas 	Tissue
 SRS524810	SRR1082685	y	Pituitary	 Pituitary 	Tissue
-SRS524819	SRR1082909	y	Thyroid	 Thyroid 	Tissue
-SRS524826	SRR1083076	y	Blood Vessel	 Artery - Aorta 	Tissue
 SRS524829	SRR1083149	y	Stomach	 Stomach 	Tissue
 SRS524836	SRR1083311	y	Adipose Tissue	 Adipose - Subcutaneous 	Tissue
 SRS524842	SRR1083456	y	Colon	 Colon - Transverse 	Tissue
 SRS524843	SRR1083480	y	Esophagus	 Esophagus - Mucosa 	Tissue
-SRS524844	SRR1083504	y	Colon	 Colon - Sigmoid 	Tissue
 SRS524848	SRR1083604	y	Blood Vessel	 Artery - Aorta 	Tissue
 SRS524857	SRR1083824	y	Adrenal Gland	 Adrenal Gland 	Tissue
 SRS524861	SRR1083918	y	Adipose Tissue	 Adipose - Visceral (Omentum) 	Tissue
@@ -401,7 +382,6 @@ SRS524894	SRR1084698	y	Esophagus	 Esophagus - Muscularis 	Tissue
 SRS524900	SRR1084842	y	Brain	 Brain - Frontal Cortex (BA9) 	Tissue
 SRS524910	SRR1085087	y	Spleen	 Spleen 	Tissue
 SRS524916	SRR1085235	y	Colon	 Colon - Transverse 	Tissue
-SRS524927	SRR1085495	y	Brain	 Brain - Frontal Cortex (BA9) 	Tissue
 SRS524938	SRR1085759	y	Kidney	 Kidney - Cortex 	Tissue
 SRS524944	SRR1085900	y	Esophagus	 Esophagus - Gastroesophageal Junction 	Tissue
 SRS524962	SRR1086304	y	Heart	 Heart - Left Ventricle 	Tissue
@@ -480,7 +460,6 @@ SRS542580	SRR1142095	n	EyeLid	EyeLid_Adult Tissue	Adult Tissue
 SRS623860	SRR1308357	y	Esophagus	 Esophagus - Gastroesophageal Junction 	Tissue
 SRS623878	SRR1308778	y	Adrenal Gland	 Adrenal Gland 	Tissue
 SRS623923	SRR1309833	y	Esophagus	 Esophagus - Gastroesophageal Junction 	Tissue
-SRS623927	SRR1309920	y	Skin	 Skin - Not Sun Exposed (Suprapubic) 	Tissue
 SRS623942	SRR1310231	y	Adrenal Gland	 Adrenal Gland 	Tissue
 SRS623952	SRR1310433	y	Liver	 Liver 	Tissue
 SRS623961	SRR1310623	y	Brain	 Brain - Spinal cord (cervical c-1) 	Tissue
@@ -508,7 +487,6 @@ SRS625381	SRR1317685	y	Skin	 Skin - Not Sun Exposed (Suprapubic) 	Tissue
 SRS625400	SRR1318089	y	Salivary Gland	 Minor Salivary Gland 	Tissue
 SRS625420	SRR1318503	y	Pancreas	 Pancreas 	Tissue
 SRS625436	SRR1318541	y	Blood Vessel	 Artery - Aorta 	Tissue
-SRS625461	SRR1319078	y	Stomach	 Stomach 	Tissue
 SRS625471	SRR1319283	y	Thyroid	 Thyroid 	Tissue
 SRS625496	SRR1319816	y	Brain	 Brain - Amygdala 	Tissue
 SRS625537	SRR1320536	y	Adrenal Gland	 Adrenal Gland 	Tissue
@@ -577,7 +555,6 @@ SRS627747	SRR1338031	y	Adipose Tissue	 Adipose - Subcutaneous 	Tissue
 SRS627758	SRR1338280	y	Colon	 Colon - Transverse 	Tissue
 SRS627760	SRR1338323	y	Brain	 Brain - Cerebellar Hemisphere 	Tissue
 SRS627763	SRR1338384	y	Salivary Gland	 Minor Salivary Gland 	Tissue
-SRS627765	SRR1338426	y	Adipose Tissue	 Adipose - Subcutaneous 	Tissue
 SRS627774	SRR1338627	y	Brain	 Brain - Amygdala 	Tissue
 SRS627803	SRR1339236	y	Breast	 Breast - Mammary Tissue 	Tissue
 SRS627818	SRR1339530	y	Brain	 Brain - Putamen (basal ganglia) 	Tissue
@@ -614,7 +591,6 @@ SRS629424	SRR1350239	y	Liver	 Liver 	Tissue
 SRS629430	SRR1350371	y	Blood	 Cells - EBV-transformed lymphocytes 	Tissue
 SRS629464	SRR1351104	y	Blood Vessel	 Artery - Aorta 	Tissue
 SRS629483	SRR1351521	y	Blood Vessel	 Artery - Coronary 	Tissue
-SRS629500	SRR1351907	y	Small Intestine	 Small Intestine - Terminal Ileum 	Tissue
 SRS629512	SRR1352234	y	Heart	 Heart - Atrial Appendage 	Tissue
 SRS629513	SRR1352169	y	Pituitary	 Pituitary 	Tissue
 SRS629554	SRR1353052	y	Esophagus	 Esophagus - Gastroesophageal Junction 	Tissue
@@ -700,7 +676,6 @@ SRS636088	SRR1387475	y	Heart	 Heart - Atrial Appendage 	Tissue
 SRS636149	SRR1388437	y	Colon	 Colon - Transverse 	Tissue
 SRS636235	SRR1388788	y	Colon	 Colon - Sigmoid 	Tissue
 SRS636254	SRR1389059	y	Brain	 Brain - Hypothalamus 	Tissue
-SRS636264	SRR1389218	y	Brain	 Brain - Hippocampus 	Tissue
 SRS636338	SRR1389955	y	Salivary Gland	 Minor Salivary Gland 	Tissue
 SRS636345	SRR1390119	y	Pituitary	 Pituitary 	Tissue
 SRS636364	SRR1390516	y	Brain	 Brain - Hippocampus 	Tissue
@@ -720,7 +695,6 @@ SRS637736	SRR1398311	y	Heart	 Heart - Atrial Appendage 	Tissue
 SRS637805	SRR1398992	y	Brain	 Brain - Cerebellum 	Tissue
 SRS637813	SRR1399156	y	Stomach	 Stomach 	Tissue
 SRS637817	SRR1399247	y	Stomach	 Stomach 	Tissue
-SRS637846	SRR1399821	y	Blood Vessel	 Artery - Aorta 	Tissue
 SRS637847	SRR1399843	y	Blood Vessel	 Artery - Tibial 	Tissue
 SRS637867	SRR1400269	y	Brain	 Brain - Putamen (basal ganglia) 	Tissue
 SRS637875	SRR1400443	y	Skin	 Cells - Transformed fibroblasts 	Tissue
@@ -839,7 +813,6 @@ SRS644521	SRR1442778	y	Lung	 Lung 	Tissue
 SRS644524	SRR1442800	y	Blood Vessel	 Artery - Coronary 	Tissue
 SRS644544	SRR1443244	y	Breast	 Breast - Mammary Tissue 	Tissue
 SRS644547	SRR1443308	y	Salivary Gland	 Minor Salivary Gland 	Tissue
-SRS644557	SRR1443525	y	Esophagus	 Esophagus - Gastroesophageal Junction 	Tissue
 SRS644560	SRR1443592	y	Esophagus	 Esophagus - Gastroesophageal Junction 	Tissue
 SRS644577	SRR1443955	y	Brain	 Brain - Nucleus accumbens (basal ganglia) 	Tissue
 SRS644580	SRR1444023	y	Skin	 Skin - Not Sun Exposed (Suprapubic) 	Tissue
