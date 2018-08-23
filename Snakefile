@@ -80,22 +80,27 @@ salmonindex_trimmed='ref/salmonindex_trimmed'
 STARindex='ref/STARindex'
 ref_fasta='ref/gencodeRef.fa'
 ref_GTF='ref/gencodeAno.gtf'
+ref_GTF_basic='ref/gencodeAno_bsc.gtf'
+ref_GTF_PA='ref/gencodeAno_pa.gtf'
 ref_PA='ref/gencodePA.fa'
 badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),genrMATsinput(subtissue),'smoothed_filtered_tpms.csv'
+    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),genrMATsinput(subtissue)
+    #,'smoothed_filtered_tpms.csv'
 
 rule downloadGencode:
-    output:ref_fasta,ref_GTF,ref_PA
+    output:ref_fasta,ref_GTF_basic,ref_GTF_PA,ref_PA
     shell:
         '''
         wget -O ref/gencodeRef.fa.gz {config[refFasta_url]}
-        wget -O ref/gencodeAno.gtf.gz {config[refGTF_url]}
+        wget -O ref/gencodeAno_bsc.gtf.gz {config[refGTF_basic_url]}
+        wget -O ref/gencodeAno_pa.gtf.gz {config[refGTF_pa_url]}
         wget -O ref/gencodePA.fa.gz {config[refPA_url]}
         gunzip ref/gencodeRef.fa.gz
-        gunzip ref/gencodeAno.gtf.gz
+        gunzip ref/gencodeAno_bsc.gtf.gz
+        gunzip ref/gencodeAno_pa.gtf.gz
         gunzip ref/gencodePA.fa.gz
         '''
 
@@ -112,7 +117,7 @@ rule getFQP:
 
 rule aggFastqsPE:
     input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
-    output:temp('fastq_files/{sampleID}.fastq.gz')
+    output:'fastq_files/{sampleID}.fastq.gz'
     run:
         #this can use some cleaning up
         id=wildcards.sampleID
@@ -133,7 +138,7 @@ rule build_salmon_index:
         sp.run(salmonindexcommand, shell=True)
 
 rule build_STARindex:
-    input: ref_PA, ref_GTF
+    input: ref_PA, ref_GTF_PA
     output:STARindex
     shell:
         '''
@@ -262,19 +267,19 @@ rule collapse_logs:
     shell:
         '''
         for i in logs/*.rq* ; do cat $i >> logs/allLogs && echo '.' >> logs/allLogs ; done
-        for i in logs/*.fqp ; do cat $i >> logs/allLogs && echo '.' >> logs/allLogs ; done    
-        grep '^.$' logs/allLogs -v > logs/.tmp
+        for i in logs/*.fqp ; do cat $i >> logs/allLogs && echo '.' >> logs/allLogs ; done
+        grep '^.$' logs/allLogs -v > logs/tmp
         grep align logs/tmp > logs/failed
-        grep map logs/tmp > logs/bad_mapping         
+        grep map logs/tmp > logs/bad_mapping
         '''
 
-rule quality_control:
-    input:expand('RE_quant_files/{sampleID}',sampleID=sample_names),'logs/failed','logs/bad_mapping'
-    output:'smoothed_filtered_tpms.csv'
-    shell:
-        '''
-        #module load R
-        #Rscript QC.R
-        touch 'smoothed_filtered_tpms.csv'
-        '''
+# rule quality_control:
+#     input:expand('RE_quant_files/{sampleID}',sampleID=sample_names),'logs/failed','logs/bad_mapping'
+#     output:'smoothed_filtered_tpms.csv'
+#     shell:
+#         '''
+#         #module load R
+#         #Rscript QC.R
+#         touch 'smoothed_filtered_tpms.csv'
+#         '''
 
