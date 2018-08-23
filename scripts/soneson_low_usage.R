@@ -12,7 +12,7 @@ setwd(working_dir)
 # pull in salmon files
 files <-paste0('quant_files/',list.files(path='quant_files',recursive=TRUE,pattern='quant.sf'))
 # Gene TX to name conversion
-gtf <- readGFF('ref/gencodeAno.gtf')%>%dplyr::filter(type=='transcript')
+gtf <- readGFF('ref/gencodeAno_bsc.gtf')%>%dplyr::filter(type=='transcript')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 #save(anno,file = 'ref/txdb.Rdata')
 # pull counts
