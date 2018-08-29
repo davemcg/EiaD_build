@@ -87,7 +87,7 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),genrMATsinput(subtissue)
+    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),expand('ref/{st}.tmp',st=subtissue),genrMATsinput(subtissue)
     #,'smoothed_filtered_tpms.csv'
 
 rule downloadGencode:
@@ -138,7 +138,7 @@ rule build_salmon_index:
         sp.run(salmonindexcommand, shell=True)
 
 rule build_STARindex:
-    input: ref_PA, ref_GTF_PA
+    input: ref_PA, ref_GTF_basic
     output:STARindex
     shell:
         '''
@@ -199,7 +199,7 @@ rule runrMATS:
     shell:
         '''
         module load rmats
-        rmats --s1 ref/{wildcards.tissue1}.rmats.txt --s2 ref/{wildcards.tissue2}.rmats.txt  -t paired --readLength 130 --gtf ref/gencodeAno.gtf --bi ref/STARindex --od {output[0]}
+        rmats --s1 ref/{wildcards.tissue1}.rmats.txt --s2 ref/{wildcards.tissue2}.rmats.txt  -t paired --readLength 130 --gtf ref/gencodeAno_bsc.gtf --bi ref/STARindex --od {output[0]}
         '''
 
 rule find_tx_low_usage:
@@ -282,4 +282,5 @@ rule collapse_logs:
 #         #Rscript QC.R
 #         touch 'smoothed_filtered_tpms.csv'
 #         '''
+
 
