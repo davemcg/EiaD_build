@@ -87,7 +87,7 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),expand('ref/{st}.tmp',st=subtissue),genrMATsinput(subtissue)
+    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),genrMATsinput(subtissue)
     #,'smoothed_filtered_tpms.csv'
 
 rule downloadGencode:
@@ -184,7 +184,7 @@ rule run_salmon:
                 logFile.write('Sample {} failed to align'.format(id))
 
 rule unzip_fastqs:
-    input:'ref/{tissue}.tmp'
+    input:'ref/{tissue}.rmats.txt'
     output: temp('tmp/{tissue}/{fastqname}')
     run:
         to_unzip= fastq_for_rMATS(wildcards.tissue,sample_dict,)
@@ -193,7 +193,7 @@ rule unzip_fastqs:
 
 rule runrMATS:
     input: lambda wildcards: fastq_for_rMATS(wildcards.tissue1,sample_dict,gz=False)+fastq_for_rMATS(wildcards.tissue2,sample_dict,gz=False),
-            STARindex
+            STARindex #,'ref/{tissue1}.rmats.txt','ref/{tissue2}.rmats.txt'
     output: 'rmats_out/{tissue1}_VS_{tissue2}',
     # might have to change read length to some sort of function
     shell:
@@ -282,5 +282,4 @@ rule collapse_logs:
 #         #Rscript QC.R
 #         touch 'smoothed_filtered_tpms.csv'
 #         '''
-
 
