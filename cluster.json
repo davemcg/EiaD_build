@@ -30,10 +30,20 @@
 		"error" : "00log/{rule}_{wildcards}.err",
 		"extra" : ""
 	},
+
+	"run_STAR_alignment":
+	{
+		"partition" : "norm",
+		"time" : "6:00:00",
+		"mem" : "48g",
+		"output"  : "00log/{rule}_{wildcards}.out",
+		"error" : "00log/{rule}_{wildcards}.err",
+		"extra" : ""
+	},
 	"runrMATS" :
 	{
 		"partition" : "norm",
-		"time" : "12:00:00",
+		"time" : "48:00:00",
 		"mem" : "48g",
 		"output"  : "00log/{rule}_{wildcards}.out",
 		"error" : "00log/{rule}_{wildcards}.err",
