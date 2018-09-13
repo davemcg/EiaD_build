@@ -9,6 +9,12 @@ notes:
 -need to make a rule to download all Gencode refs
 
 ***IF YOU CHANGE A RULE NAME MAKE SURE TO CHECK cluster.json ****
+Things to do
+-rewrite sonneson_low_usage
+-rewrite script for removing_tx
+
+this is a test
+
 '''
 import subprocess as sp
 import itertools as it
@@ -38,9 +44,9 @@ def lookupRunfromID(card,sample_dict):
             res.append('fastqParts/{}.fastq.gz'.format(file))
     return(res)
 
-def genrMATsinput(subtissue):
+def genrMATsinput(subtissue,type):
     all_combs= list(it.combinations(subtissue,2))
-    res=['rmats_out/{}_VS_{}'.format(x[0],x[1]) for x in all_combs]
+    res=['rmats_out/{}_VS_{}'.format(x[0]+type,x[1]+type) for x in all_combs]
     return(res)
 
 def fastq_for_rMATS(tissue,samp_dict ,gz=True):
@@ -68,10 +74,41 @@ def all_fastqs(samp_dict):
             res.append('fastq_files/{}.fastq.gz'.format(sample))
     return(res)
 
+
+def subtissue_to_bam(subtissue, sample_dict):
+    type=subtissue[-2:]#paired or single ended
+    subtissue=subtissue[:-3]
+    res=[]
+    for sample in sample_dict.keys():
+        if type=='PE':
+            if sample_dict[sample]['subtissue']==subtissue and sample_dict[sample]['paired']:
+                res.append('STARbams_realigned/{}/Aligned.out.bam'.format(sample))
+        else:#type=='SE'
+            if sample_dict[sample]['subtissue']==subtissue and not sample_dict[sample]['paired']:
+                res.append('STARbams_realigned/{}/Aligned.out.bam'.format(sample))
+    return (res)
+#does string tie look
+def tissue_to_bam(tissue, sample_dict):
+    res=[]
+    for sample in sample_dict.keys():
+        if sample_dict[sample]['tissue']==tissue:
+            res.append('STARbams/{}/Aligned.out.bam'.format(sample))
+    return(res)
+
+
+
+
+
 configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
 # need to add something for defined for subtissues
-subtissue=["Retina_Adult.Tissue",  "RPE_Cell.Line", "ESC_Stem.Cell.Line", "RPE_Adult.Tissue",'body']
+#subtissue=["Retina_Adult.Tissue",  "RPE_Cell.Line", "ESC_Stem.Cell.Line", "RPE_Adult.Tissue"]
+subtissues_SE=["RPE_Stem.Cell.Line","RPE_Cell.Line","Retina_Adult.Tissue","RPE_Fetal.Tissue","ESC_Stem.Cell.Line","Cornea_Adult.Tissue","Cornea_Fetal.Tissue","Cornea_Cell.Line","Retina_Stem.Cell.Line",'body']
+subtissues_PE=["Retina_Adult.Tissue", "RPE_Cell.Line", "ESC_Stem.Cell.Line" , "RPE_Adult.Tissue",'body' ]# add body back in  at some point
+tissues=['Retina','RPE','ESC','Cornea']
+# tissues=['Retina','RPE','Pancreas']
+# subtissues_PE=['Retina_Adult.Tissue','.Pancreas.']
+# subtissues_SE=['RPE_Stem.Cell.Line','RPE_Cell.Line']
 sample_names=sample_dict.keys()
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
 loadSalmon= "module load {} && ".format(config['salmon_version'])
@@ -87,9 +124,11 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input: expand('RE_quant_files/{sampleID}',sampleID=sample_names),genrMATsinput(subtissue)
+    input: expand('RE_quant_files/{tissue}/{sampleID}',tissue=tissues ,sampleID=sample_names),genrMATsinput(subtissues_PE,'_PE'),genrMATsinput(subtissues_SE,'_SE')
     #,'smoothed_filtered_tpms.csv'
-
+'''
+****PART 1**** download files
+'''
 rule downloadGencode:
     output:ref_fasta,ref_GTF_basic,ref_GTF_PA,ref_PA
     shell:
@@ -102,6 +141,8 @@ rule downloadGencode:
         gunzip ref/gencodeAno_bsc.gtf.gz
         gunzip ref/gencodeAno_pa.gtf.gz
         gunzip ref/gencodePA.fa.gz
+        module load samtools
+        samtools faidx ref/gencodePA.fa
         '''
 
 rule getFQP:
@@ -129,13 +170,9 @@ rule aggFastqsPE:
                 sp.run('cat {fqp} >> fastq_files/{id}_{i}.fastq.gz '.format(fqp=fqp,i=i,id=id),shell=True)
             else:
                 sp.run('cat {fqp} >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
-
-rule build_salmon_index:
-    input: ref_fasta
-    output:salmonindex
-    run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(ref_fasta,salmonindex)
-        sp.run(salmonindexcommand, shell=True)
+'''
+****PART 2**** Align with STAR and build Transcriptome
+'''
 
 rule build_STARindex:
     input: ref_PA, ref_GTF_basic
@@ -144,34 +181,79 @@ rule build_STARindex:
         '''
         module load STAR
         mkdir -p ref/STARindex
-        STAR --runThreadN 4 --runMode genomeGenerate --genomeDir {output[0]} --genomeFastaFiles {input[0]} --sjdbGTFfile {input[1]} --sjdbOverhang 100
+        STAR --runThreadN 8 --runMode genomeGenerate --genomeDir {output[0]} --genomeFastaFiles {input[0]} --sjdbGTFfile {input[1]} --sjdbOverhang 100
 
         '''
+rule run_STAR_alignment:
+    input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.id),'fastq_files/{}_2.fastq.gz'.format(wildcards.id)] if sample_dict[wildcards.id]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.id),STARindex
+    output:'STARbams/{id}/Aligned.out.bam'
+    run:
+        id=wildcards.id
+        sp.run('mkdir -p STARbams/{}'.format(id),shell=True)
+        STARcmd_pref= 'module load STAR && STAR --runThreadN 8 --genomeDir ref/STARindex --outSAMstrandField intronMotif'
+        STARcmd_suf=' --readFilesCommand gunzip -c --outFileNamePrefix STARbams/{}/ --outSAMtype BAM Unsorted '.format(id)
+        if sample_dict[id]['paired']:
+            paired=' --readFilesIn {} {} '.format(input[0],input[1])
+        else:
+            paired=' --readFilesIn {}'.format(input[0])
+        sp.run(STARcmd_pref+paired+STARcmd_suf,shell=True)
 
-rule preprMats_running:
-    input: all_fastqs(sample_dict)
-    output:expand('ref/{st}.rmats.txt',st=subtissue),expand('ref/{st}.tmp',st=subtissue)
+rule merge_bams_for_stringtie:
+    input: lambda wildcards: tissue_to_bam(wildcards.tissue,sample_dict)
+    output:'STARbams/{tissue}.sorted.bam'
+    run:
+        bams_to_merge=str(input).strip("[|]").replace("'","").replace(',',' ') # probably a better way to do this
+        samtools_merge='module load samtools && samtools cat {} | '.format(bams_to_merge)
+        samgtools_sort=' samtools sort --threads 7 - > STARbams/{}.sorted.bam'.format(wildcards.tissue)
+        sp.run(samtools_merge + samgtools_sort,shell=True)
+
+rule run_stringtie:
+    input: 'STARbams/{tissue}.sorted.bam'
+    output: 'ref/{tissue}_st.gtf'
     shell:
         '''
-        module load R
-        Rscript scripts/preprMATS.R
+        module load stringtie
+        stringtie {input[0]} -o {output[0]} -G ref/gencodeAno_bsc.gtf
         '''
+#gffread v0.9.12.Linux_x86_64/
+rule gtf_to_fasta:
+    input: 'ref/{tissue}_st.gtf'
+    output: 'ref/{tissue}_st.fa'
+    shell:
+        '''
+        ./gffread/gffread -w {output[0]} -g {ref_PA} {input[0]}
+        '''
+
+
+
+'''
+****PART 3*** Initial quantification
+'''
+rule build_salmon_index:
+    input: 'ref/{tissue}_st.fa'
+    output:'ref/salmonindex_{tissue}'
+    run:
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(input[0],output[0])
+        sp.run(salmonindexcommand, shell=True)
+
+
 
 rule run_salmon:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
-            salmonindex
-    output: 'quant_files/{sampleID}'
-    log: 'logs/{sampleID}.log'
+            'ref/salmonindex_{tissue}'
+    output: 'quant_files/{tissue}/{sampleID}'
+    log: 'logs/{tissue}.{sampleID}.log'
     run:
         id=wildcards.sampleID
+        tissue=wildcards.tissue
         paired=sample_dict[id]['paired']
         if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -1 {} -2 {} -o quant_files/{}'.format(input[2],input[0],input[1],id)
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],output[0])
         else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -r {} -o quant_files/{}'.format(input[1],input[0],id)
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -r {} -o {}'.format(input[1],input[0],output[0])
         sp.run(salmon_command,shell=True)
-        log1='logs/{}.log'.format(id)
-        salmon_info='quant_files/{}/aux_info/meta_info.json'.format(id)
+        log1='logs/{}.{}.log'.format(tissue,id)
+        salmon_info='quant_files/{}/{}/aux_info/meta_info.json'.format(tissue,id)
         if os.path.exists(salmon_info):
             with open(salmon_info) as file:
                 salmonLog=json.load(file)
@@ -183,27 +265,73 @@ rule run_salmon:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed to align'.format(id))
 
-rule unzip_fastqs:
-    input:'ref/{tissue}.rmats.txt'
-    output: temp('tmp/{tissue}/{fastqname}')
-    run:
-        to_unzip= fastq_for_rMATS(wildcards.tissue,sample_dict,)
-        for file in to_unzip:
-            sp.run('gunzip fastq_files/{} -c > tmp/{}/{}'.format(file,wildcards.tissue,file.strip('.gz')),shell=True)
-
-rule runrMATS:
-    input: lambda wildcards: fastq_for_rMATS(wildcards.tissue1,sample_dict,gz=False)+fastq_for_rMATS(wildcards.tissue2,sample_dict,gz=False),
-            STARindex #,'ref/{tissue1}.rmats.txt','ref/{tissue2}.rmats.txt'
-    output: 'rmats_out/{tissue1}_VS_{tissue2}',
-    # might have to change read length to some sort of function
+'''
+****PART 4**** rMATS
+'''
+rule rebuild_star_index:
+    input: ref_PA, 'ref/{tissue}_st.gtf'
+    output:'ref/{tissue}.STARindex'
     shell:
         '''
-        module load rmats
-        rmats --s1 ref/{wildcards.tissue1}.rmats.txt --s2 ref/{wildcards.tissue2}.rmats.txt  -t paired --readLength 130 --gtf ref/gencodeAno_bsc.gtf --bi ref/STARindex --od {output[0]}
+        module load STAR
+        mkdir -p ref/STARindex
+        STAR --runThreadN 8 --runMode genomeGenerate --genomeDir {output[0]} --genomeFastaFiles {input[0]} --sjdbGTFfile {input[1]} --sjdbOverhang 100
+        '''
+rule realign_STAR:
+    input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.id),'fastq_files/{}_2.fastq.gz'.format(wildcards.id)] if sample_dict[wildcards.id]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.id),lambda wildcards: 'ref/{}.STARindex'.format(sample_dict[wildcards.id]['tissue'])
+    output:'STARbams_realigned/{id}/Aligned.out.bam'
+    run:
+        id=wildcards.id
+        sp.run('mkdir -p STARbams_realigned/{}'.format(id),shell=True)
+        STARcmd_pref= 'module load STAR && STAR --runThreadN 8 --genomeDir {} '.format(input[-1])
+        STARcmd_suf=' --readFilesCommand gunzip -c --outFileNamePrefix STARbams/{}/ --outSAMtype BAM Unsorted '.format(id)
+        if sample_dict[id]['paired']:
+            paired=' --readFilesIn {} {} '.format(input[0],input[1])
+        else:
+            paired=' --readFilesIn {}'.format(input[0])
+        sp.run(STARcmd_pref+paired+STARcmd_suf,shell=True)
+
+
+rule preprMats_running:# this is going to run ultiple times, but should not be a problem
+    input: lambda wildcards: subtissue_to_bam(wildcards.st,sample_dict)
+    output:'ref/{st}.rmats.txt'
+    shell:
+        '''
+        module load R
+        Rscript scripts/preprMATS.R {config[sampleFile]}
         '''
 
+
+rule runrMATS:
+    input: 'ref/{tissue1}.rmats.txt','ref/{tissue2}.rmats.txt',STARindex
+             #,'ref/{tissue1}.rmats.txt','ref/{tissue2}.rmats.txt'
+    output: 'rmats_out/{tissue1}_VS_{tissue2}'
+    # might have to change read length to some sort of function
+    shell:
+        #**need to fix this for bam mode**
+        '''
+        wc={wildcards.tissue1}
+        id=${{wc: -2}}
+        paired=PE
+        if [ $id = $paired ]
+        then
+           flag=paired
+        else
+            flag=single
+        fi
+
+        module load rmats
+        rmats --b1 ref/{wildcards.tissue1}.rmats.txt --b2 ref/{wildcards.tissue2}.rmats.txt  -t $flag --readLength 130 --gtf ref/gencodeAno_bsc.gtf --bi ref/STARindex --od {output[0]}
+        '''
+# need sorted bams for string tie
+
+'''
+****PART 5**** find and remove lowly used transcripts
+'''
+#problem with tximport; going to have to make a custom tsxdb from all the gtfs
+
 rule find_tx_low_usage:
-    input: expand('quant_files/{sampleID}', sampleID=sample_names)
+    input: expand('quant_files/{tissue}/{sampleID}',tissue=tissues, sampleID=sample_names)
     output:'tx_for_removal'
     shell:
         '''
@@ -212,10 +340,10 @@ rule find_tx_low_usage:
         '''
 
 rule remove_tx_low_usage:
-    input:'tx_for_removal'
-    output: ref_trimmed
+    input:'tx_for_removal','ref/{tissue}_st.fa'
+    output: 'ref/{tissue}_trimmed.fa'
     run:
-        with open(ref_fasta) as infasta, open('tx_for_removal') as bad_tx, open(ref_trimmed,'w+') as outfasta:
+        with open(input[1]) as infasta, open('tx_for_removal') as bad_tx, open(output[0],'w+') as outfasta:
             names=set()
             for line in bad_tx:
                 names.add('>'+line.strip())
@@ -229,28 +357,34 @@ rule remove_tx_low_usage:
                     outfasta.write(oldline+'\n')
                 oldline=infasta.readline().strip().strip().split('|')[0]
 
+
+'''
+***PART 6*** requantify salmon
+'''
+
 rule rebuild_salmon_index:
-    input:ref_trimmed
-    output:salmonindex_trimmed
+    input:'ref/{tissue}_trimmed.fa'
+    output:'ref/salmonindexTrimmed_{tissue}'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(ref_trimmed,salmonindex_trimmed)
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 rule reQuantify_Salmon:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
-            salmonindex_trimmed
-    output:'RE_quant_files/{sampleID}'
-    log: 'logs/{sampleID}.rq.log'
+            'ref/salmonindexTrimmed_{tissue}'
+    output:'RE_quant_files/{tissue}/{sampleID}'
+    log: 'logs/{tissue}.{sampleID}.rq.log'
     run:
         id=wildcards.sampleID
+        tissue=wildcards.tissue
         paired=sample_dict[id]['paired']
         if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -1 {} -2 {} -o RE_quant_files/{}'.format(input[2],input[0],input[1],id)
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],output[0])
         else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -r {} -o RE_quant_files/{}'.format(input[1],input[0],id)
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -r {} -o {}'.format(input[1],input[0],output[0])
         sp.run(salmon_command,shell=True)
-        log1='logs/{}.rq.log'.format(id)
-        salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format(id)
+        log1='logs/{}.{}.rq.log'.format(tissue,id)
+        salmon_info='RE_quant_files/{}/{}/aux_info/meta_info.json'.format(tissue, id)
         if os.path.exists(salmon_info):
             with open(salmon_info) as file:
                 salmonLog=json.load(file)
@@ -282,4 +416,3 @@ rule collapse_logs:
 #         #Rscript QC.R
 #         touch 'smoothed_filtered_tpms.csv'
 #         '''
-
