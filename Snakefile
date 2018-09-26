@@ -196,26 +196,35 @@ rule build_STARindex:
 
 rule run_STAR_alignment:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.id),'fastq_files/{}_2.fastq.gz'.format(wildcards.id)] if sample_dict[wildcards.id]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.id),STARindex
-    output:'STARbams/{id}/Aligned.out.bam'
+    output:temp('STARbams/{id}/raw.Aligned.out.bam')
     run:
         id=wildcards.id
         sp.run('mkdir -p STARbams/{}'.format(id),shell=True)
         STARcmd_pref= 'module load STAR && STAR --runThreadN 8 --genomeDir ref/STARindex --outSAMstrandField intronMotif'
-        STARcmd_suf=' --readFilesCommand gunzip -c --outFileNamePrefix STARbams/{}/ --outSAMtype BAM SortedByCoordinate '.format(id)
+        STARcmd_suf=' --readFilesCommand gunzip -c --outFileNamePrefix STARbams/{}/raw. --outSAMtype BAM Unsorted '.format(id)
         # might have to add that back later
         if sample_dict[id]['paired']:
             paired=' --readFilesIn {} {} '.format(input[0],input[1])
         else:
             paired=' --readFilesIn {}'.format(input[0])
         sp.run(STARcmd_pref+paired+STARcmd_suf,shell=True)
+        #samtools_cmd= 'module load samtools && samtools sort -o Aligned.out.bam --threads 7 raw.Aligned.out.bam 
 
+rule sort_bams:
+    input:'STARbams/{id}/raw.Aligned.out.bam'
+    output:'STARbams/{id}/Aligned.out.bam'
+    shell:
+        '''
+        module load samtools
+        samtools sort -o {output[0]} --threads 7 {input[0]}
+        '''
 rule merge_bams_for_stringtie:
     input: lambda wildcards: tissue_to_bam(wildcards.tissue,sample_dict)
     output:'STARbams/{tissue}.sorted.bam'
     run:
         bams_to_merge=str(input).strip("[|]").replace("'","").replace(',',' ') # probably a better way to do this
         #samtools_merge='module load samtools && samtools cat {} | '.format(bams_to_merge)
-        #samgtools_sort=' samtools sort --threads 7 - > STARbams/{}.sorted.bam'.format(wildcards.tissue)
+        #samgtools_sort=' samtools sort --threads 15 - > STARbams/{}.sorted.bam'.format(wildcards.tissue)
         samtools_merge='module load samtools && samtools merge --threads 7 {} {}  '.format(output[0],bams_to_merge)
         sp.run(samtools_merge + samgtools_sort,shell=True)
 
@@ -225,7 +234,7 @@ rule run_stringtie:
     shell:
         '''
         module load stringtie
-        stringtie {input[0]} -o {output[0]} -p 8 -G ref/gencodeAno_bsc.gtf
+        stringtie {input[0]} -o {output[0]} -p 16 -G ref/gencodeAno_bsc.gtf
         '''
 #gffread v0.9.12.Linux_x86_64/
 rule merge_gtfs_and_make_fasta:
@@ -309,7 +318,7 @@ rule realign_STAR:
     run:
         id=wildcards.id
         sp.run('mkdir -p STARbams_realigned/{}'.format(id),shell=True)
-        STARcmd_pref= 'module load STAR && STAR  --outSAMstrandField intronMotif --outSAMtype BAM SortedByCoordinate --alignSJDBoverhangMin 6 '
+        STARcmd_pref= 'module load STAR && STAR  --outSAMstrandField intronMotif --outSAMtype BAM Unsorted --alignSJDBoverhangMin 6 '
         STARcmd_pref+=' --alignIntronMax 299999 --runThreadN 8 --genomeDir {} --sjdbGTFfile {} '.format(input[-1],'ref/combined_final.gtf ')
         STARcmd_suf=' --readFilesCommand gunzip -c --outFileNamePrefix STARbams_realigned/{}/ '.format(id)
         if sample_dict[id]['paired']:
