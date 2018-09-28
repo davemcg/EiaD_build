@@ -225,8 +225,8 @@ rule merge_bams_for_stringtie:
         bams_to_merge=str(input).strip("[|]").replace("'","").replace(',',' ') # probably a better way to do this
         #samtools_merge='module load samtools && samtools cat {} | '.format(bams_to_merge)
         #samgtools_sort=' samtools sort --threads 15 - > STARbams/{}.sorted.bam'.format(wildcards.tissue)
-        samtools_merge='module load samtools && samtools merge --threads 7 {} {}  '.format(output[0],bams_to_merge)
-        sp.run(samtools_merge + samgtools_sort,shell=True)
+        samtools_merge='module load samtools && samtools merge --threads 15 {} {}  '.format(output[0],bams_to_merge)
+        sp.run(samtools_merge,shell=True)
 
 rule run_stringtie:
     input: 'STARbams/{tissue}.sorted.bam'
