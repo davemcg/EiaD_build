@@ -79,6 +79,11 @@ def subtissue_to_bam(subtissue, sample_dict):
     type=subtissue[-2:]#paired or single ended
     subtissue=subtissue[:-3]
     res=[]
+    if subtissue=='body':
+        with open(config['synth_body']) as sb:
+            res=['STARbams_realigned/'+line.strip()+'/Aligned.out.bam' for line in sb]
+        return(res)
+
     for sample in sample_dict.keys():
         if type=='PE':
             if sample_dict[sample]['subtissue']==subtissue and sample_dict[sample]['paired']:
@@ -90,6 +95,11 @@ def subtissue_to_bam(subtissue, sample_dict):
 #does string tie look
 def tissue_to_bam(tissue, sample_dict):
     res=[]
+    if tissue=='body':
+        with open(config['synth_body']) as sb:
+            res=['STARbams/'+line.strip()+'/Aligned.out.bam' for line in sb]
+        return(res)
+
     for sample in sample_dict.keys():
         if sample_dict[sample]['tissue']==tissue:
             res.append('STARbams/{}/Aligned.out.bam'.format(sample))
@@ -124,7 +134,7 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input: expand('RE_quant_files/{sampleID}/quant.sf' ,sampleID=sample_names),genrMATsinput(subtissues_PE,'_PE'),genrMATsinput(subtissues_SE,'_SE')
+    input: 'smoothed_filtered_tpms.csv',genrMATsinput(subtissues_PE,'_PE'),genrMATsinput(subtissues_SE,'_SE')
     #,'smoothed_filtered_tpms.csv'
 '''
 ****PART 1**** download files
@@ -208,7 +218,7 @@ rule run_STAR_alignment:
         else:
             paired=' --readFilesIn {}'.format(input[0])
         sp.run(STARcmd_pref+paired+STARcmd_suf,shell=True)
-        #samtools_cmd= 'module load samtools && samtools sort -o Aligned.out.bam --threads 7 raw.Aligned.out.bam 
+        #samtools_cmd= 'module load samtools && samtools sort -o Aligned.out.bam --threads 7 raw.Aligned.out.bam
 
 rule sort_bams:
     input:'STARbams/{id}/raw.Aligned.out.bam'
@@ -443,12 +453,12 @@ rule reQuantify_Salmon:
 #         grep map logs/tmp > logs/bad_mapping
 #         '''
 
-# rule quality_control:
-#     input:expand('RE_quant_files/{sampleID}',sampleID=sample_names),'logs/failed','logs/bad_mapping'
-#     output:'smoothed_filtered_tpms.csv'
-#     shell:
-#         '''
-#         #module load R
-#         #Rscript QC.R
-#         touch 'smoothed_filtered_tpms.csv'
-#         '''
+rule quality_control:
+    input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names)
+    output:'smoothed_filtered_tpms.csv'
+    shell:
+        '''
+        module load R
+        Rscript QC.R
+
+        '''
