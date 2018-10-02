@@ -4,7 +4,7 @@ combination=i_combination
 event <- i_event
 files <- i_files
 event_header <- i_event_header
-
+- script wont run on its own, need to remove and move some files gotta fix that
 
 
 
@@ -12,20 +12,10 @@ event_header <- i_event_header
 > event <- i_event
 subtissue <- i_subtissue
 '
-setwd('~/NIH/autoRNAseq/')
+#setwd('~/NIH/autoRNAseq/')
 library(dplyr)
 
-i_event_header <- list(SE.MATS.JC.txt=c('chr'	,'strand',	'exonStart_0base',	'exonEnd',	'upstreamES',	'upstreamEE',	'downstreamES',	'downstreamEE'),
-                     RI.MATS.JC.txt=c('chr'	,'strand',	'riExonStart_0base',	'riExonEnd'	,'upstreamES'	,'upstreamEE'	,'downstreamES'	,'downstreamEE'),
-                     MXE.MATS.JC.txt=c('chr',	'strand',	'X1stExonStart_0base',	'X1stExonEnd',	'X2ndExonStart_0base',	'X2ndExonEnd'	,'upstreamES',	'upstreamEE',	'downstreamES',	'downstreamEE'),
-                     A5SS.MATS.JC.txt=c('chr',	'strand',	'longExonStart_0base',	'longExonEnd',	'shortES',	'shortEE',	'flankingES',	'flankingEE'),
-                     A3SS.MATS.JC.txt=c('chr',	'strand',	'longExonStart_0base',	'longExonEnd'	,'shortES',	'shortEE'	,'flankingES',	'flankingEE')
-                    )
-events <- names(i_event_header)
-i_files <- dir('rmats_out')
-subtissues_PE <- c("Retina_Adult.Tissue", "RPE_Cell.Line", "ESC_Stem.Cell.Line" , "RPE_Adult.Tissue" )# add body back in  at some point
-k <- combn(subtissues_PE,2,simplify = F)
-i_event <- 'MXE.MATS.JC.txt'
+# i_event <- 'MXE.MATS.JC.txt'
 #combination=k[[1]]
 #somehow this will fail sometimes as a function but will run fine line by line
 combine_PE_SE <- function(combination,event,files,event_header){
@@ -37,7 +27,8 @@ combine_PE_SE <- function(combination,event,files,event_header){
         path <- paste0('rmats_comb/',combination[1],'_VS_',combination[2])
         dir.create(path = path)
         write.table(tmp,paste(path,event,sep='/'),row.names = F,col.names = T, quote = F,sep = '\t')
-        if(event=='A3SS.MATs.JC.txt') unlink(target_files,recursive = T)# after all events, remove the folders
+        #if(event=='A3SS.MATs.JC.txt') unlink(target_files,recursive = T)# after all events, remove the folders
+        #if(event=='A3SS.MATS.JC.txt') unlink(paste0('rmats_out/',target_files),recursive = T)
         return(0)
     }else if(length(target_files)==0){
         print('REEEEEEEEEEEEEE')
@@ -90,18 +81,8 @@ combine_PE_SE <- function(combination,event,files,event_header){
     path <- paste0('rmats_comb/',combination[1],'_VS_',combination[2])
     dir.create(path = path)
     write.table(final,paste(path,event,sep='/'),row.names = F,col.names = T, quote = F,sep = '\t')
-    if(event=='A3SS.MATs.JC.txt') unlink(target_files,recursive = T)
+    
 }
-
-for (i in 3:length(k)){
-    i_combination <- k[[i]]
-    for(j in 1:length(events)){
-        i_event <- events[j]
-        combine_PE_SE(combination = i_combination,event = i_event,files = i_files,event_header = i_event_header)
-    }
-}
-
-
 ##Combine all different comparisons for a specific tissue
 #needs to be cleaned up a little bit, there are soe redundant parts
 combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
@@ -109,8 +90,9 @@ combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
     for(comparison in files.st){
         #generate the first comparison
         #comparison <- files.st[1]
-        print(comparison)
+        #print(comparison)
         if(first==TRUE){
+              print('in firsdt')
               first <- FALSE
               test1 <- paste('rmats_comb',comparison,event, sep = '/')%>% read.table(,header = T,sep = '\t',stringsAsFactors = F)
               st_counts <- c('IJC_SAMPLE_1','SJC_SAMPLE_1')
@@ -122,7 +104,7 @@ combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
               comp <- paste0(c("PValue","FDR"),'.',comparison)
               colnames(test1)<- c( "GeneID","geneSymbol",event_header[[event]], 'IJC_SAMPLE_1','SJC_SAMPLE_1',comp)
               st_counts <- c('IJC_SAMPLE_1','SJC_SAMPLE_1')
-              if(grepl(',', test1[1,'IJC_SAMPLE_1'])) test1[,st_counts] <- apply(test1[,st_counts],2, function(x) sapply(x,function(y) strsplit(y,',')%>%unlist%>%as.numeric%>%sum) )
+              if(grepl(',', test1[,'IJC_SAMPLE_1'])%>%any) test1[,st_counts] <- apply(test1[,st_counts],2, function(x) sapply(x,function(y) strsplit(y,',')%>%unlist%>%as.numeric%>%sum) )
               colnames(test1)<- c( "GeneID","geneSymbol",event_header[[event]], 'IJC_SAMPLE_1','SJC_SAMPLE_1',comp)
           } else{# now add rest of comparisons to first
               #comparison <- files.st[2]
@@ -136,7 +118,7 @@ combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
               comp <- paste0(c("PValue","FDR"),'.',comparison)
               colnames(test2)<- c( "GeneID","geneSymbol",event_header[[event]], 'IJC_SAMPLE_1','SJC_SAMPLE_1',comp)
               st_counts <- c('IJC_SAMPLE_1','SJC_SAMPLE_1')
-              if(grepl(',', test1[1,'IJC_SAMPLE_1'])) test2[,st_counts] <- apply(test2[,st_counts],2, function(x) sapply(x,function(y) strsplit(y,',')%>%unlist%>%as.numeric%>%sum) )
+              if(grepl(',', test1[,'IJC_SAMPLE_1'])%>%any) test2[,st_counts] <- apply(test2[,st_counts],2, function(x) sapply(x,function(y) strsplit(y,',')%>%unlist%>%as.numeric%>%sum) )
               #test2[,st_counts] <- apply(test2[,st_counts],2, function(x) sapply(x,function(y) strsplit(y,',')%>%unlist%>%as.numeric%>%sum) )
               #join old and new dfs together, then fill in any events only foun in new,  and the format
               test_join <- full_join(test1,test2, by= event_header[[event]])
@@ -146,6 +128,7 @@ combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
               test_join[is.na(test_join$IJC_SAMPLE_1.x),mergeCols.x] <-test_join[is.na(test_join$IJC_SAMPLE_1.x),mergeCols.y] 
               test_join <- select(test_join,-mergeCols.y)
               colnames(test_join) <- c(colnames(test1),comp)
+              #consider adding the fold change here
               test1 <- test_join
               
         }
@@ -154,10 +137,40 @@ combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
     dir.create(path = path)
     write.table(test1,paste(path,event,sep = '/'), col.names = T, row.names = F, quote = F, sep = '\t')
 }
+
+i_event_header <- list(SE.MATS.JC.txt=c('chr'	,'strand',	'exonStart_0base',	'exonEnd',	'upstreamES',	'upstreamEE',	'downstreamES',	'downstreamEE'),
+                       RI.MATS.JC.txt=c('chr'	,'strand',	'riExonStart_0base',	'riExonEnd'	,'upstreamES'	,'upstreamEE'	,'downstreamES'	,'downstreamEE'),
+                       MXE.MATS.JC.txt=c('chr',	'strand',	'X1stExonStart_0base',	'X1stExonEnd',	'X2ndExonStart_0base',	'X2ndExonEnd'	,'upstreamES',	'upstreamEE',	'downstreamES',	'downstreamEE'),
+                       A5SS.MATS.JC.txt=c('chr',	'strand',	'longExonStart_0base',	'longExonEnd',	'shortES',	'shortEE',	'flankingES',	'flankingEE'),
+                       A3SS.MATS.JC.txt=c('chr',	'strand',	'longExonStart_0base',	'longExonEnd'	,'shortES',	'shortEE'	,'flankingES',	'flankingEE')
+)
+events <- names(i_event_header)
+i_files <- dir('rmats_out')
+subtissues_PE <- c("Retina_Adult.Tissue", "RPE_Cell.Line", "ESC_Stem.Cell.Line" , "RPE_Adult.Tissue" )# add body back in  at some point
+k <- combn(subtissues_PE,2,simplify = F)
+for (i in 1:length(k)){
+  i_combination <- k[[i]]
+  for(j in 1:length(events)){
+    i_event <- events[j]
+    combine_PE_SE(combination = i_combination,event = i_event,files = i_files,event_header = i_event_header)
+  }
+}
+
+for (combination in k){
+  target_files <- i_files[grepl(combination[1],i_files)]%>%.[grepl(combination[2],.)]%>%paste0('rmats_out/',.)
+  print(target_files)
+  unlink(target_files,recursive = T)
+  
+  
+}
+#system2('mv rmats_out/* rmats_comb/')
+#couldnt get that^ to work, might have to just run it separately
+#nowcombine everything together
+#hcekc to see if body files are alive
 i_files <- dir('rmats_comb/')
 subtissues <- c("RPE_Stem.Cell.Line","RPE_Cell.Line","Retina_Adult.Tissue","RPE_Fetal.Tissue","ESC_Stem.Cell.Line","Cornea_Adult.Tissue","Cornea_Fetal.Tissue",
                 "Cornea_Cell.Line","Retina_Stem.Cell.Line","RPE_Adult.Tissue")
-for(j in 2:length(subtissues)){
+for(j in 1:length(subtissues)){
     i_subtissue <- subtissues[j]
     for( i in 1:length(events)){
         i_event=events[i]
