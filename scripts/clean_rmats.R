@@ -135,7 +135,30 @@ combine_rmats_output <- function(files,subtissue,event,first=TRUE,event_header){
     }
     path <- paste('rmats_final',subtissue,sep = '/')
     dir.create(path = path)
+    test1[,c('IJC_SAMPLE_1','SJC_SAMPLE_1')] <- apply(test1[,c('IJC_SAMPLE_1','SJC_SAMPLE_1')],2, function(x) sapply(x,function(y) strsplit(y,',')%>%unlist%>%as.numeric%>%sum) )
+    test1[is.na(test1)] <- 1
     write.table(test1,paste(path,event,sep = '/'), col.names = T, row.names = F, quote = F, sep = '\t')
+}
+combine_fromGTF.novel <- function(event,files,first=TRUE){
+    for(path in files){
+        if (first==TRUE){
+            if(nrow(read.table(paste0(path,'/fromGTF.novelEvents.',event,'.txt'),sep = '\t',header = F,stringsAsFactors = F))>1){
+                prev <- read.table(paste0(path,'/fromGTF.novelEvents.',event,'.txt'),sep = '\t',header = T,stringsAsFactors = F)
+                first <- FALSE
+            }
+        }else{
+            next1 <- read.table(paste0(path,'/fromGTF.novelEvents.',event,'.txt'),sep = '\t',header = T,stringsAsFactors = F)
+            prev <- anti_join(next1,prev)%>%rbind(.,prev)# BAAAAAAAAD
+        }
+    }
+    return(prev)
+}
+# generate tables with all novel events
+t <- c('SE','RI','MXE','A5SS','A3SS')
+files <- dir('~/NIH/autoRNAseq/old_rmats_out',full.names = T)
+for(i in t){
+    all_ev <-  combine_fromGTF.novel('SE',files)
+    write.table(all_ev,paste0('all.',i,'.novelevents.txt'),quote = F,col.names = T,row.names = F,sep = '\t')
 }
 
 i_event_header <- list(SE.MATS.JC.txt=c('chr'	,'strand',	'exonStart_0base',	'exonEnd',	'upstreamES',	'upstreamEE',	'downstreamES',	'downstreamEE'),
@@ -143,7 +166,9 @@ i_event_header <- list(SE.MATS.JC.txt=c('chr'	,'strand',	'exonStart_0base',	'exo
                        MXE.MATS.JC.txt=c('chr',	'strand',	'X1stExonStart_0base',	'X1stExonEnd',	'X2ndExonStart_0base',	'X2ndExonEnd'	,'upstreamES',	'upstreamEE',	'downstreamES',	'downstreamEE'),
                        A5SS.MATS.JC.txt=c('chr',	'strand',	'longExonStart_0base',	'longExonEnd',	'shortES',	'shortEE',	'flankingES',	'flankingEE'),
                        A3SS.MATS.JC.txt=c('chr',	'strand',	'longExonStart_0base',	'longExonEnd'	,'shortES',	'shortEE'	,'flankingES',	'flankingEE')
-)
+                      )
+
+
 events <- names(i_event_header)
 i_files <- dir('rmats_out')
 subtissues_PE <- c("Retina_Adult.Tissue", "RPE_Cell.Line", "ESC_Stem.Cell.Line" , "RPE_Adult.Tissue" )# add body back in  at some point
@@ -154,7 +179,7 @@ for (i in 1:length(k)){
     i_event <- events[j]
     combine_PE_SE(combination = i_combination,event = i_event,files = i_files,event_header = i_event_header)
   }
-}
+}# add PESE
 
 for (combination in k){
   target_files <- i_files[grepl(combination[1],i_files)]%>%.[grepl(combination[2],.)]%>%paste0('rmats_out/',.)
@@ -162,7 +187,7 @@ for (combination in k){
   unlink(target_files,recursive = T)
   
   
-}
+}$ # remove stuff
 #system2('mv rmats_out/* rmats_comb/')
 #couldnt get that^ to work, might have to just run it separately
 #nowcombine everything together
@@ -178,6 +203,8 @@ for(j in 1:length(subtissues)){
     }    
 }
 
+
+#strat: combine all novel events per type in one master file, then select specific ones
 
 
 
