@@ -147,13 +147,17 @@ rule downloadGencode:
     shell:
         '''
         wget -O ref/gencodeRef.fa.gz {config[refFasta_url]}
-        wget -O ref/gencodeAno_bsc.gtf.gz {config[refGTF_basic_url]}
+        wget -O ref/gencodeAno_bsc_tmp.gtf.gz {config[refGTF_basic_url]}
         wget -O ref/gencodeAno_pa.gtf.gz {config[refGTF_pa_url]}
-        wget -O ref/gencodePA.fa.gz {config[refPA_url]}
+        wget -O ref/gencodePA_tmp.fa.gz {config[refPA_url]}
         gunzip ref/gencodeRef.fa.gz
-        gunzip ref/gencodeAno_bsc.gtf.gz
+        gunzip ref/gencodeAno_bsc_tmp.gtf.gz
+        module load R
+        Rscript scrips/filterGTF.R
         gunzip ref/gencodeAno_pa.gtf.gz
-        gunzip ref/gencodePA.fa.gz
+        gunzip ref/gencodePA_tmp.fa.gz
+        module load python/3.6
+        python3 scripts/filterFasta.py ref/gencodePA_tmp.fa chroms_to_remove ref/gencodePA.fa
         module load samtools
         samtools faidx ref/gencodePA.fa
         '''
@@ -258,6 +262,10 @@ rule merge_gtfs_and_make_fasta:
 
         module load R
         Rscript scripts/clean_gtf.R
+        module load bedtools
+        bedtools intersect -f .5  -wo -s -a missing.bed -b refgtf.bed > testout.bed
+        module load R
+        Rscript scripts/clean_gtf_part2.R
 
         ./gffread/gffread -w {output[1]} -g {ref_PA} ref/combined_final.gtf
 
