@@ -1,5 +1,5 @@
 setwd('/data/swamyvs/autoRNAseq')
-setwd('~/NIH/autoRNAseq')
+#setwd('~/NIH/autoRNAseq')
 library(tximport)
 library(dplyr)
 library(qsmooth)
@@ -57,15 +57,15 @@ qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$t
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
 ################
-load('/volumes/McGaughey_S/Human_eyeIntegration_paper/data/lengthScaledTPM_processed_2017_02.Rdata')
-david_lsTPMSqsft <- as.data.frame(lengthScaledTPM_processed)
-g <- intersect(rownames(david_lsTPMSqsft),rownames(lstpms_smoothed))
-s <- intersect(colnames(david_lsTPMSqsft),colnames(lstpms_smoothed))
-# 18701 genes in common, 849 samples
-cor(cbind(lstpms_smoothed[g,s[1]],david_lsTPMSqsft[g,s[1]]),method = 'spearman')
-k <- vector(mode = 'numeric',length = length(s))
-names(k) <- s
-for(i in s)k[i] <- cor(cbind(lstpms_smoothed[g,i],david_lsTPMSqsft[g,i]),method = 'spearman')[2,1]
+# load('/volumes/McGaughey_S/Human_eyeIntegration_paper/data/lengthScaledTPM_processed_2017_02.Rdata')
+# david_lsTPMSqsft <- as.data.frame(lengthScaledTPM_processed)
+# g <- intersect(rownames(david_lsTPMSqsft),rownames(lstpms_smoothed))
+# s <- intersect(colnames(david_lsTPMSqsft),colnames(lstpms_smoothed))
+# # 18701 genes in common, 849 samples
+# cor(cbind(lstpms_smoothed[g,s[1]],david_lsTPMSqsft[g,s[1]]),method = 'spearman')
+# k <- vector(mode = 'numeric',length = length(s))
+# names(k) <- s
+# for(i in s)k[i] <- cor(cbind(lstpms_smoothed[g,i],david_lsTPMSqsft[g,i]),method = 'spearman')[2,1]
 
 
 
