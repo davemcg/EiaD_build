@@ -13,7 +13,7 @@ Things to do
 -rewrite sonneson_low_usage
 -rewrite script for removing_tx
 
-this is a test
+
 
 '''
 import subprocess as sp
@@ -153,7 +153,7 @@ rule downloadGencode:
         gunzip ref/gencodeRef.fa.gz
         gunzip ref/gencodeAno_bsc_tmp.gtf.gz
         module load R
-        Rscript scrips/filterGTF.R
+        Rscript scripts/filterGTF.R
         gunzip ref/gencodeAno_pa.gtf.gz
         gunzip ref/gencodePA_tmp.fa.gz
         module load python/3.6
@@ -278,7 +278,7 @@ rule merge_gtfs_and_make_fasta:
 -went back to tracking quant.sf since bad fastqs were removed
 '''
 rule build_salmon_index:
-    input: 'ref/combined_st.fa'
+    input:  ref_fasta
     output:'ref/salmonindex'
     run:
         salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(input[0],output[0])
@@ -373,7 +373,6 @@ rule runrMATS:
         else
             flag=single
         fi
-        echo $flag > {wildcards.tissue1}.{wildcards.tissue2}.flag
         module load rmats
         rmats --b1 {input[0]} --b2 {input[1]}  -t $flag --readLength 130 --gtf {input[3]} --bi {input[2]} --od {output[0]}
         '''
