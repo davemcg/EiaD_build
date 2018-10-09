@@ -7,13 +7,15 @@ library(Rtsne)
 library(ggplot2)
 library(dbscan)
 library(edgeR)
-
+library(rtracklayer)
+args=commandArgs(trailingOnly = T)
 e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
 
 ###write.
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
 sample_design <- read.table('sampleTable.txt',stringsAsFactors = F,header=F, sep = '\t')
-load('ref/txdb.Rdata')
+gtf <- readGFF(args[1])%>%dplyr::filter(type=='transcript')
+anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','sub-tissue','origin')
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
 

@@ -71,6 +71,10 @@
                 "extra" : ""
 
 	},
+	"merge_gtfs_and_make_fasta":
+	{
+		"mem" : "48g"
+	},
 	"realign_STAR" :
 	{
 		"partition" : "norm",
