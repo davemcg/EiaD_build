@@ -1,5 +1,5 @@
-#setwd('/data/swamyvs/autoRNAseq')
-setwd('~/NIH/autoRNAseq')
+setwd('/data/swamyvs/autoRNAseq')
+#setwd('~/NIH/autoRNAseq')
 library(tximport)
 library(dplyr)
 library(qsmooth)

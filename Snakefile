@@ -91,14 +91,15 @@ rule downloadGencode:
     shell:
         '''
 
-        wget -O ref/gencodeRef.fa.gz {config[refFasta_url]}
+        wget -O ref/gencodeRef.tmp.fa.gz {config[refFasta_url]}
         wget -O ref/gencodeAno_bsc_gtf.gz {config[refGTF_basic_url]}
         wget -O ref/gencodePA_tmp.fa.gz {config[refPA_url]}
-        gunzip ref/gencodeRef.fa.gz
+        gunzip ref/gencodeRef.tmp.fa.gz
         gunzip ref/gencodeAno_bsc.gtf.gz
         gunzip ref/gencodePA_tmp.fa.gz
         module load python/3.6
         python3 scripts/filterFasta.py ref/gencodePA_tmp.fa ref/chroms_to_remove ref/gencodePA.fa
+        python3 scripts/filterFasta.py ref/genccodeRef.tmp.fa {config[tx_not_in_gtf]} ref/gencodeRef.fa
         module load samtools
         samtools faidx ref/gencodePA.fa
 
@@ -184,7 +185,7 @@ rule find_tx_low_usage:
     shell:
         '''
         module load R
-        Rscript scripts/soneson_low_usage.R {input[-1]}
+        Rscript scripts/soneson_low_usage.R {ref_GTF_basic}
         '''
 
 rule remove_tx_low_usage:
@@ -208,6 +209,7 @@ rule remove_tx_low_usage:
 
 '''
 ***PART 4*** requantify salmon
+-can't reverse index in shell apparently
 '''
 
 rule rebuild_salmon_index:
@@ -250,6 +252,6 @@ rule quality_control:
     shell:
         '''
         module load R
-        Rscript QC.R {input[-1]}
+        Rscript QC.R {ref_GTF_basic}
 
         '''
