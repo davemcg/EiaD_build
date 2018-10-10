@@ -1,5 +1,5 @@
-setwd('/data/swamyvs/autoRNAseq')
-#setwd('~/NIH/autoRNAseq')
+#setwd('/data/swamyvs/autoRNAseq')
+setwd('~/NIH/autoRNAseq')
 library(tximport)
 library(dplyr)
 library(qsmooth)
@@ -29,7 +29,7 @@ txi.lsTPMs <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon", count
 #save(txi,file = 'tpms.Rdata')
 tpms <- as.data.frame(txi.lsTPMs$counts)
 counts <- as.data.frame(txi.counts$counts)
-colnames(tpms) <- colnames(counts) <-  samplenames
+colnames(tpms)  <-  samplenames
 # ## remove samples that failed to meet mapping %
 # bad_mapping <- read.table('logs/bad_mapping',stringsAsFactors = F)
 # sample_design <- sample_design[!sample_design$sample_accession%in%bad_mapping$V2,]
@@ -40,8 +40,8 @@ keep_genes <- which(rowSums(tpms)>=ncol(tpms))# revove gene w less than an avera
 tpms <- tpms[keep_genes,]
 sample_medians <- apply(tpms,2,function(x) median(x))
 
-# more genes => lower medians; davids script removed 72/1224 ~5% so pick a number that removes that much
-keep_median <- which(sample_medians>5)# criteria for removing samples with low counts
+# more genes => lower medians, looks like 3 givees results most similar to david, see comparingQC.r
+keep_median <- which(sample_medians>3)# criteria for removing samples with low counts
 tpms <- tpms[,keep_median]
 
 #normalize for liberry size
@@ -57,6 +57,7 @@ colnames(lsTPM_librarySize) <- colnames(tpms)
 sample_design <- sample_design[sample_design$sample_accession%in%colnames(lsTPM_librarySize),]
 qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$tissue))
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
+
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
 ################
 # load('/volumes/McGaughey_S/Human_eyeIntegration_paper/data/lengthScaledTPM_processed_2017_02.Rdata')
@@ -81,9 +82,9 @@ tpms_smoothed_filtered <- lstpms_smoothed
 set.seed(23235)
 tsne_out <- Rtsne(as.matrix(log2(t(tpms_smoothed_filtered)+1)),perplexity = 40, check_duplicates = FALSE, theta=0.0 )
 tsne_plot <- data.frame(tsne_out$Y,sample_design[sample_design$sample_accession%in%colnames(tpms_smoothed_filtered),])
-ggplot(tsne_plot,aes(x=X1,y=X2, col=tissue))+
-  geom_point(size=2)+
-  theme_minimal()
+# ggplot(tsne_plot,aes(x=X1,y=X2, col=tissue))+
+#   geom_point(size=2)+
+#   theme_minimal()
 
 
 
@@ -104,7 +105,6 @@ ggplot(tsne_plot,aes(x=X1,y=X2,col=tissue, shape=outlier))+
   ggtitle('outlier from tSNE data')+
   theme_minimal()
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
-#921 to 885
-write.csv(trimmed_counts_smoothed,'smoothed_filtered_tpms.csv',row.names = F)
+write.csv(trimmed_counts_smoothed,'smoothed_filtered_tpms.csv')
 
 
