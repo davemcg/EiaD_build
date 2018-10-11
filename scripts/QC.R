@@ -8,7 +8,7 @@ library(ggplot2)
 library(dbscan)
 library(edgeR)
 library(rtracklayer)
-args=commandArgs(trailingOnly = T)
+args=commandArgs(trailingOnly = T)#for gtf
 e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
 
 ###write.
@@ -24,11 +24,11 @@ files0 <- files0[file.exists(files0)]
 samplenames <- strsplit(files0,'/' )%>% sapply(function(x) x[2])
 sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 #load('tpms.Rdata')
-txi.counts <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon")
+#txi.counts <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon")
 txi.lsTPMs <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon", countsFromAbundance = "lengthScaledTPM")
 #save(txi,file = 'tpms.Rdata')
 tpms <- as.data.frame(txi.lsTPMs$counts)
-counts <- as.data.frame(txi.counts$counts)
+#counts <- as.data.frame(txi.counts$counts)
 colnames(tpms)  <-  samplenames
 # ## remove samples that failed to meet mapping %
 # bad_mapping <- read.table('logs/bad_mapping',stringsAsFactors = F)
@@ -36,12 +36,18 @@ colnames(tpms)  <-  samplenames
 # samplenames <- sample_design$sample_accession
 # tpms <- tpms[,samplenames]
 
-keep_genes <- which(rowSums(tpms)>=ncol(tpms))# revove gene w less than an average count of 1
+keep_genes <- which(rowSums(tpms)>=ncol(tpms)/2)# revove gene w less than an average count of .5
 tpms <- tpms[keep_genes,]
 sample_medians <- apply(tpms,2,function(x) median(x))
 
 # more genes => lower medians, looks like 3 givees results most similar to david, see comparingQC.r
-keep_median <- which(sample_medians>3)# criteria for removing samples with low counts
+keep_median <- which(sample_medians>50)# criteria for removing samples with low counts
+# removed <- samplenames[which(sample_medians<=50)]
+# intersect(d.removed,removed)%>%length
+# View(sample_design[removed,])
+# View(sample_design[setdiff(removed,d.removed),])
+
+
 tpms <- tpms[,keep_median]
 
 #normalize for liberry size
@@ -100,10 +106,10 @@ for(t in tsne_plot$tissue){
   tsne_plot[tsne_plot$tissue==t,]$outlier <- outliers
 }
 tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
-ggplot(tsne_plot,aes(x=X1,y=X2,col=tissue, shape=outlier))+
-  geom_point(size=3)+
-  ggtitle('outlier from tSNE data')+
-  theme_minimal()
+# ggplot(tsne_plot,aes(x=X1,y=X2,col=tissue, shape=outlier))+
+#   geom_point(size=3)+
+#   ggtitle('outlier from tSNE data')+
+#   theme_minimal()
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
 write.csv(trimmed_counts_smoothed,'smoothed_filtered_tpms.csv')
 
