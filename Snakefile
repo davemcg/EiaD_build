@@ -143,7 +143,7 @@ rule build_salmon_index:
     input:  ref_fasta
     output:'ref/salmonindex'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(input[0],output[0])
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 
@@ -158,9 +158,9 @@ rule run_salmon:
         #tissue=wildcards.tissue
         paired=sample_dict[id]['paired']
         if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias  -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'quant_files/{}'.format(id))
         else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -r {} -o {}'.format(input[1],input[0],'quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -r {} -o {}'.format(input[1],input[0],'quant_files/{}'.format(id))
         sp.run(salmon_command,shell=True)
         log1='logs/{}.log'.format(id)
         salmon_info='quant_files/{}/aux_info/meta_info.json'.format(id)
@@ -218,7 +218,7 @@ rule rebuild_salmon_index:
     input:'ref/gencodeRef_trimmed.fa'
     output:'ref/salmonindexTrimmed'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi -k 31'.format(input[0],output[0])
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 rule reQuantify_Salmon:
@@ -231,9 +231,9 @@ rule reQuantify_Salmon:
         #tissue=wildcards.tissue
         paired=sample_dict[id]['paired']
         if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
         else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
         sp.run(salmon_command,shell=True)
         log1='logs/{}.rq.log'.format(id)
         salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
