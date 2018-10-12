@@ -7,7 +7,7 @@
 		"output"  : "00log/{rule}_{wildcards}.out",
 		"error" : "00log/{rule}_{wildcards}.err",
 		"extra" : "",
-		"name" : "{rule}.job"
+		"job-name" : "{rule}.job"
 	},
 	"build_salmon_index" :
 	{
