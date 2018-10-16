@@ -27,18 +27,21 @@ def readSampleFile(samplefile):
 
 def lookupRunfromID(card,sample_dict):
     id=card
-    if '_' in id:
-        i= '1' if id[-1]=='1' else '2'# check L/R file
-        id=card[:-2]
-    fqpfiles=sample_dict[id]['files']
-    res=[]
-    for file in fqpfiles:
-        if sample_dict[id]['paired']:
-            #PE
-            res.append('fastqParts/{}_{}.fastq.gz'.format(file,i))
-        else:
-            #SE
-            res.append('fastqParts/{}.fastq.gz'.format(file))
+    if 'E-MTAB' in card: #not the best but it works
+        return('bam_files/{}.bam'.format(id[:-2]))
+    else:
+        if '_' in id:
+            i= '1' if id[-1]=='1' else '2'# check L/R file
+            id=card[:-2]
+        fqpfiles=sample_dict[id]['files']
+        res=[]
+        for file in fqpfiles:
+            if sample_dict[id]['paired']:
+                #PE
+                res.append('fastqParts/{}_{}.fastq.gz'.format(file,i))
+            else:
+                #SE
+                res.append('fastqParts/{}.fastq.gz'.format(file))
     return(res)
 
 
@@ -51,7 +54,15 @@ def all_fastqs(samp_dict):
         else:
             res.append('fastq_files/{}.fastq.gz'.format(sample))
     return(res)
-
+# def samples_for_salmon(sample, sample_dict):
+#     if 'E-MTAB' in sample :
+#         return('{}.bam'.format(sample))
+#     else:
+#         if sample_dict[sample]['paired']:
+#             return(['fastq_files/{}_1.fastq.gz'.format(sample),('fastq_files/{}_2.fastq.gz'.format(sample))])
+#         else:
+#             return('fastq_files/{}.fastq.gz'.format(sample))
+#
 
 configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
@@ -122,18 +133,26 @@ rule aggFastqsPE:
     input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
     output:'fastq_files/{sampleID}.fastq.gz'
     run:
-        #this can use some cleaning up
+        #this can use some cleaning up - rule runs twice for paired
         id=wildcards.sampleID
-        fileParts=lookupRunfromID(id,sample_dict)
-        i='1' if '_' in id and id[-1]=='1' else '2'# which strand
-        id=id[:-2] if '_' in id else id
-        for fqp in fileParts:
-            if sample_dict[id]['paired']:
-                sp.run('cat {fqp} >> fastq_files/{id}_{i}.fastq.gz '.format(fqp=fqp,i=i,id=id),shell=True)
-            else:
-                sp.run('cat {fqp} >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
-
-
+        if '.bam' in input[0]:
+            #need to collate a bam before you can convert, otherwise will lose many reads
+            cmd='module load samtools &&  samtools collate -O bam_files/{} | \
+            samtools fastq -1 fastq_files/{}_1.fastq -2 fastq_files/{}_2.fastq -0 /dev/null -s /dev/null -n -F 0x900 -'.format(input[0],id,id)
+            sp.run(cmd,shell=True)
+            gunzip=' gunzip -c -f fastq_files/{}_1.fastq > fastq_files/{}_1.fastq.gz'.format(id)
+            sp.run(gunzip,shell=True)
+            gunzip=' gunzip -c -f fastq_files/{}_2.fastq > fastq_files/{}_2.fastq.gz'.format(id)
+            sp.run(gunzip,shell=True)
+        else:
+            fileParts=lookupRunfromID(id,sample_dict)
+            i='1' if '_' in id and id[-1]=='1' else '2'# which strand
+            id=id[:-2] if '_' in id else id
+            for fqp in fileParts:
+                if sample_dict[id]['paired']:
+                    sp.run('cat {fqp} >> fastq_files/{id}_{i}.fastq.gz '.format(fqp=fqp,i=i,id=id),shell=True)
+                else:
+                    sp.run('cat {fqp} >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
 
 '''
 ****PART 2*** Initial quantification
@@ -150,7 +169,7 @@ rule build_salmon_index:
 
 rule run_salmon:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
-            'ref/salmonindex'
+        'ref/salmonindex'
     output: 'quant_files/{sampleID}/quant.sf'
     log: 'logs/{sampleID}.log'
     run:
@@ -218,7 +237,7 @@ rule rebuild_salmon_index:
     input:'ref/gencodeRef_trimmed.fa'
     output:'ref/salmonindexTrimmed'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
+        salmonindexcommand=loadSalmon + 'salmon index -t {} code -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 rule reQuantify_Salmon:
@@ -254,6 +273,6 @@ rule quality_control:
     shell:
         '''
         module load R
-        Rscript QC.R {ref_GTF_basic}
+        Rscript QC.R {config[sampleFile]} {ref_GTF_basic}
 
         '''
