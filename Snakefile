@@ -136,13 +136,14 @@ rule aggFastqsPE:
         #this can use some cleaning up - rule runs twice for paired
         id=wildcards.sampleID
         if '.bam' in input[0]:
+            id=wildcards.sampleID[:-2]
             #need to collate a bam before you can convert, otherwise will lose many reads
-            cmd='module load samtools &&  samtools collate -O bam_files/{} | \
+            cmd='module load samtools &&  samtools collate -O {} | \
             samtools fastq -1 fastq_files/{}_1.fastq -2 fastq_files/{}_2.fastq -0 /dev/null -s /dev/null -n -F 0x900 -'.format(input[0],id,id)
             sp.run(cmd,shell=True)
-            gunzip=' gunzip -c -f fastq_files/{}_1.fastq > fastq_files/{}_1.fastq.gz'.format(id)
+            gunzip=' gunzip -c -f fastq_files/{}_1.fastq > fastq_files/{}_1.fastq.gz'.format(id,id)
             sp.run(gunzip,shell=True)
-            gunzip=' gunzip -c -f fastq_files/{}_2.fastq > fastq_files/{}_2.fastq.gz'.format(id)
+            gunzip=' gunzip -c -f fastq_files/{}_2.fastq > fastq_files/{}_2.fastq.gz'.format(id, id)
             sp.run(gunzip,shell=True)
         else:
             fileParts=lookupRunfromID(id,sample_dict)
@@ -193,7 +194,6 @@ rule run_salmon:
         else:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed to align'.format(id))
-
 
 '''
 ****PART 3**** find and remove lowly used transcripts
