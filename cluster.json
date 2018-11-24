@@ -32,7 +32,8 @@
 	{
 		"partition":"norm",
 		"time" : "8:00:00",
-    "mem" : "16g"
+    "mem" : "16g",
+		"cpus-per-task": "4"
 	},
 	"find_tx_low_usage" :
 	{
@@ -42,7 +43,8 @@
 	{
 		"partition":"norm",
 		"time" : "8:00:00",
-    "mem" : "16g"
+    "mem" : "16g",
+		"cpus-per-task": "4"
 	},
 	"quality_control" :
 	{
