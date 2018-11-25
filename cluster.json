@@ -13,11 +13,11 @@
 	{
 		"partition":"norm",
 		"time" : "4:00:00",
-    "mem" : "8g",
-    "output"  : "00log/{rule}_{wildcards}.out",
-    "error" : "00log/{rule}_{wildcards}.err",
-    "extra" : "",
-    "job-name" : "{rule}.job"
+		"mem" : "8g",
+		"output"  : "00log/{rule}_{wildcards}.out",
+		"error" : "00log/{rule}_{wildcards}.err",
+		"extra" : "",
+		"job-name" : "{rule}.job"
 
 	},
 	"build_salmon_index" :
@@ -32,7 +32,7 @@
 	{
 		"partition":"norm",
 		"time" : "8:00:00",
-    "mem" : "16g",
+		"mem" : "16g",
 		"cpus-per-task": "4"
 	},
 	"find_tx_low_usage" :
@@ -43,7 +43,7 @@
 	{
 		"partition":"norm",
 		"time" : "8:00:00",
-    "mem" : "16g",
+		"mem" : "16g",
 		"cpus-per-task": "4"
 	},
 	"quality_control" :
