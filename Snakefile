@@ -273,6 +273,6 @@ rule quality_control:
     shell:
         '''
         module load R
-        Rscript QC.R {config[sampleFile]} {ref_GTF_basic}
+        Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic}
 
         '''
