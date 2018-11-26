@@ -250,9 +250,9 @@ rule reQuantify_Salmon:
         #tissue=wildcards.tissue
         paired=sample_dict[id]['paired']
         if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
         else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
         sp.run(salmon_command,shell=True)
         log1='logs/{}.rq.log'.format(id)
         salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
