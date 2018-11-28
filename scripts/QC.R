@@ -35,7 +35,7 @@ colnames(tpms)  <-  samplenames
 # sample_design <- sample_design[!sample_design$sample_accession%in%bad_mapping$V2,]
 # samplenames <- sample_design$sample_accession
 # tpms <- tpms[,samplenames]
-
+tpms[is.na(tpms)] <- 0
 keep_genes <- which(rowSums(tpms)>=ncol(tpms)/2)# revove gene w less than an average count of .5
 tpms <- tpms[keep_genes,]
 sample_medians <- apply(tpms,2,function(x) median(x))
