@@ -5,8 +5,9 @@ library(dplyr)
 library(limma)
 library(edgeR)
 library(qsmooth)
-sample_table <- read.table('samplesrun_0928.tissue',stringsAsFactors = F, header = F,sep = '\t')
-lstpms_smoothed <- read.csv('smoothed_filtered_tpms.csv',row.names = 1)
+args=commandArgs(trailingOnly = T)
+sample_table <- read.table(args[1],stringsAsFactors = F, header = F,sep = '\t')
+lstpms_smoothed <- read.csv('results/smoothed_filtered_tpms.csv',row.names = 1)
 colnames(sample_table) <- c('sample','run','paired','tissue','subtissue','origin')
 sample_table <- filter(sample_table,sample%in%colnames(lstpms_smoothed))
 eye_samples <- filter(sample_table,tissue%in%c('Retina','RPE','Cornea','ESC'))
@@ -14,7 +15,7 @@ body_samples <- filter(sample_table,!tissue%in%c('Retina','RPE','Cornea','ESC'))
 set.seed(123421)
 gtex_sample <- sample_n(body_samples,176)
 #getting different samples than david, going to use his list
-load('david_gtex_subsamples.RData')# l> gtex_sub_samples
+load('ref/david_gtex_subsamples.RData')# l> gtex_sub_samples
 gtex_sample <- filter(sample_table,sample%in%gtex_sub_samples)
 gtex_sample$tissue <- gtex_sample$subtissue <-  'Body'
 deg_sample_table <- rbind(eye_samples,gtex_sample)
@@ -102,16 +103,4 @@ cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.L
 vfit_all <- lmFit(v_eye_gtex, design_eye_and_gtex)
 vfit_all <- contrasts.fit(vfit_all, contrasts=cont.matrix_all)
 efit_all_vinny <- eBayes(vfit_all)
-DE_55_vinny <- topTableF(efit_all,number=300000, adjust.method = 'fdr') %>% data.frame()
-rownames(DE_55_vinny) <- rownames(deg_counts)
-load('david_diffexp.RData')
-davetop55 <- topTableF(david_efit_all,number=300000, adjust.method = 'fdr') %>% data.frame()
-
-vin_de55 <- DE_55[rownames(DE_55)%in%rownames(davetop55),]
-
-davetop55 <- davetop55[rownames(davetop55)%in%rownames(vin_de55),]
-davetop55 <- topTableF(david_efit_all,number=300000, adjust.method = 'fdr') %>% data.frame()
-vin_de55 <- DE_55[rownames(DE_55)%in%rownames(davetop55),]
-davetop55 <- davetop55[rownames(davetop55)%in%rownames(vin_de55),]
-for(i in 1:59)print(cor(davetop55[,i],vin_de55[,i]))
-
+save(efit_all_vinny,file='results/diffexp_efit.Rdata')
