@@ -89,7 +89,7 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input: 'smoothed_filtered_tpms.csv'
+    input:'results/diffexp_efit.Rdata'
     #,'smoothed_filtered_tpms.csv'
 '''
 ****PART 1**** download files
@@ -269,10 +269,18 @@ rule reQuantify_Salmon:
 
 rule quality_control:
     input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
-    output:'smoothed_filtered_tpms.csv'
+    output:'results/smoothed_filtered_tpms.csv'
     shell:
         '''
         module load R
         Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic}
 
+        '''
+rule differntial_expression:
+    input: 'results/smoothed_filtered_tpms.csv'
+    output:'results/diffexp_efit.Rdata'
+    shell:
+        '''
+        module load R
+        Rscript scripts/diffExp.R
         '''
