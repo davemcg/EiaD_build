@@ -96,6 +96,8 @@ rule all:
 -still need to add missing fastq files
 -gffread needs indexed fasta
 -need to add versioning of tools to yaml
+- the gencode pc tx has ~40k tx not in the gencode basic gtf, i looked and all the missing ones are not protein coding,
+so we're gonna remove the tx  not in the gtf from the fasta
 '''
 rule downloadGencode:
     output:ref_fasta,ref_GTF_basic,ref_PA
@@ -109,8 +111,10 @@ rule downloadGencode:
         gunzip ref/gencodeAno_bsc.gtf.gz
         gunzip ref/gencodePA_tmp.fa.gz
         module load python/3.6
+        python3 scripts/extract_fasta_names.py > ref/tx_names
+        grep -o -Ff ref/tx_names ref/gencodeAno_bsc.gtf | grep -v -Ff - ref/tx_names > ref/tx_not_in_gtf
         python3 scripts/filterFasta.py ref/gencodePA_tmp.fa ref/chroms_to_remove ref/gencodePA.fa
-        python3 scripts/filterFasta.py ref/gencodeRef_tmp.fa {config[tx_not_in_gtf]} ref/gencodeRef.fa
+        python3 scripts/filterFasta.py ref/gencodeRef_tmp.fa tx ref/tx_not_in_gtf ref/gencodeRef.fa
         rm ref/gencodeRef_tmp.fa
         rm ref/gencodePA_tmp.fa
         module load samtools
