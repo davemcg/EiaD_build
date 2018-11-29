@@ -111,6 +111,6 @@ tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 #   ggtitle('outlier from tSNE data')+
 #   theme_minimal()
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
-write.csv(trimmed_counts_smoothed,'smoothed_filtered_tpms.csv')
+write.csv(trimmed_counts_smoothed,'results/smoothed_filtered_tpms.csv')
 
 
