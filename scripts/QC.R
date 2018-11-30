@@ -7,14 +7,13 @@ library(Rtsne)
 library(ggplot2)
 library(dbscan)
 library(edgeR)
-library(rtracklayer)
 args=commandArgs(trailingOnly = T)#for gtf
 e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
 
 ###write.
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
 sample_design <- read.table(args[1],stringsAsFactors = F,header=F, sep = '\t')
-gtf <- readGFF(args[2])%>%dplyr::filter(type=='transcript')
+gtf <- rtracklayer::readGFF(args[2])%>%dplyr::filter(type=='transcript')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','sub-tissue','origin')
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
@@ -65,19 +64,6 @@ qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$t
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
-################
-# load('/volumes/McGaughey_S/Human_eyeIntegration_paper/data/lengthScaledTPM_processed_2017_02.Rdata')
-# david_lsTPMSqsft <- as.data.frame(lengthScaledTPM_processed)
-# g <- intersect(rownames(david_lsTPMSqsft),rownames(lstpms_smoothed))
-# s <- intersect(colnames(david_lsTPMSqsft),colnames(lstpms_smoothed))
-# # 18701 genes in common, 849 samples
-# cor(cbind(lstpms_smoothed[g,s[1]],david_lsTPMSqsft[g,s[1]]),method = 'spearman')
-# k <- vector(mode = 'numeric',length = length(s))
-# names(k) <- s
-# for(i in s)k[i] <- cor(cbind(lstpms_smoothed[g,i],david_lsTPMSqsft[g,i]),method = 'spearman')[2,1]
-
-
-
 
 
 
