@@ -286,5 +286,5 @@ rule differntial_expression:
     shell:
         '''
         module load R
-        Rscript scripts/diffExp.R
+        Rscript scripts/diffExp.R {config[sampleFile]}
         '''
