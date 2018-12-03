@@ -114,7 +114,7 @@ rule downloadGencode:
         python3 scripts/extract_fasta_names.py > ref/tx_names
         grep -o -Ff ref/tx_names ref/gencodeAno_bsc.gtf | grep -v -Ff - ref/tx_names > ref/tx_not_in_gtf
         python3 scripts/filterFasta.py ref/gencodePA_tmp.fa ref/chroms_to_remove ref/gencodePA.fa
-        python3 scripts/filterFasta.py ref/gencodeRef_tmp.fa tx ref/tx_not_in_gtf ref/gencodeRef.fa
+        python3 scripts/filterFasta.py ref/gencodeRef_tmp.fa ref/tx_not_in_gtf ref/gencodeRef.fa
         rm ref/gencodeRef_tmp.fa
         rm ref/gencodePA_tmp.fa
         module load samtools
@@ -286,5 +286,5 @@ rule differntial_expression:
     shell:
         '''
         module load R
-        Rscript scripts/diffExp.R
+        Rscript scripts/diffExp.R {config[sampleFile]}
         '''

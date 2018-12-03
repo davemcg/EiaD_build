@@ -2,7 +2,6 @@ library(tximport)
 library(data.table)
 library(dplyr)
 library(readr)
-library(rtracklayer)
 # sonnesson 2016 inspired ID of low-usage tx
 # http://biorxiv.org/content/early/2015/08/24/025387
 # working dir, biowulf2
@@ -13,7 +12,7 @@ setwd(working_dir)
 # pull in salmon files
 files <-paste0('quant_files/',list.files(path='quant_files',recursive=TRUE,pattern='quant.sf'))
 # Gene TX to name conversion
-gtf <- readGFF(args[1])%>%dplyr::filter(type=='transcript')
+gtf <- rtracklayer::readGFF(args[1])%>%dplyr::filter(type=='transcript')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 #save(anno,file = 'ref/txdb.Rdata')
 # pull counts
