@@ -1,12 +1,12 @@
-setwd('/Volumes/McGaughey_S/Human_eyeIntegration_paper/')
-setwd('~/NIH/autoRNAseq/')
+
+setwd('/data/swamyvs/autoRNAseq')
 library(broom)
 library(UpSetR)
 library(tidyverse)
 library(limma)
 library(DT)
 #library(ReporteRs)
-load('data/limma_voom_DE_all_by_all_synthesticSet2.Rdata')
+#load('data/limma_voom_DE_all_by_all_synthesticSet2.Rdata')
 #load('differential_expression_data.Rdata')
 source('scripts/GO_enrichment.R')
 source('scripts/GO_term_finder.R')
@@ -14,6 +14,8 @@ source('scripts/GO_term_finder.R')
 # for GO enrichement, big six
 #background_genes <- topTable(big_six[[1]], number=30000) %>% rownames_to_column('Gene') %>% dplyr::select(Gene)#// need big 6
 # for GO enrichment, all by all
+load('results/diffexp_efit.Rdata')
+efit_all=efit_all_vinny
 background_genes_all_by_all <- topTable(efit_all, number=30000)%>% rownames_to_column('Gene') %>% dplyr::select(Gene)
 #options("ReporteRs-fontsize"=8, "ReporteRs-default-font"="Monaco")
 set_maker2 <- function(list.of.all){
@@ -128,9 +130,9 @@ down_gene_lists <- contrast_DOWNgene_lists(efit_all, 2)
 # only keep body comparisons
 # down_gene_lists <- down_gene_lists[grep('Body',names(contrast_DOWNgene_lists(efit_all, 2)))]
 go_up <- all_go_tester(up_gene_lists,'Up', background_genes_all_by_all)
-save(go_up,file = '~/NIH/autoRNAseq/go_up_david.Rdata')
+save(go_up,file = 'results/go_up.Rdata')
 go_down <- all_go_tester(down_gene_lists,'Down', background_genes_all_by_all)
-save(go_down,file = '~/NIH/autoRNAseq/go_down_david.Rdata')
+save(go_down,file = 'results/go_down_david.Rdata')
 all_vs_all_go <- rbind(go_up, go_down)
 
 all_vs_all_go %>% mutate(Set = ifelse(Test=='Down', gsub('_vs_',' < ', Set),gsub('_vs_',' > ', Set) )) %>% group_by(Set, Test, Ontology) %>% filter(as.numeric(`P value (FDR)`)<0.01) %>%  summarise(Count=n())
