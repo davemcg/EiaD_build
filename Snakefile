@@ -104,21 +104,12 @@ rule downloadGencode:
     shell:
         '''
 
-        wget -O ref/gencodeRef_tmp.fa.gz {config[refFasta_url]}
+        wget -O ref/gencodeRef.fa.gz {config[refFasta_url]}
         wget -O ref/gencodeAno_bsc.gtf.gz {config[refGTF_basic_url]}
-        wget -O ref/gencodePA_tmp.fa.gz {config[refPA_url]}
-        gunzip ref/gencodeRef_tmp.fa.gz
+        wget -O ref/gencodePA.fa.gz {config[refPA_url]}
+        gunzip ref/gencodeRef.fa.gz
         gunzip ref/gencodeAno_bsc.gtf.gz
-        gunzip ref/gencodePA_tmp.fa.gz
-        module load python/3.6
-        python3 scripts/extract_fasta_names.py > ref/tx_names
-        grep -o -Ff ref/tx_names ref/gencodeAno_bsc.gtf | grep -v -Ff - ref/tx_names > ref/tx_not_in_gtf
-        python3 scripts/filterFasta.py ref/gencodePA_tmp.fa ref/chroms_to_remove ref/gencodePA.fa
-        python3 scripts/filterFasta.py ref/gencodeRef_tmp.fa ref/tx_not_in_gtf ref/gencodeRef.fa
-        rm ref/gencodeRef_tmp.fa
-        rm ref/gencodePA_tmp.fa
-        module load samtools
-        samtools faidx ref/gencodePA.fa
+        gunzip ref/gencodePA.fa.gz
 
         '''
 
