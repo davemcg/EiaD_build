@@ -262,16 +262,25 @@ rule reQuantify_Salmon:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed to align'.format(id))
 
+# load all salmon quant with with tximport (lengthScaledTPM)
+# run QSmooth normalization
+# remove genes with near 0 counts for all samples
+# remove samples with:
+# 	low counts
+#	normalize lengthScaled TPM by library size
+#	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
 rule quality_control:
     input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
+	params: 
+		working_dir = '/data/swamyvs/autoRNAseq'
     output:'results/smoothed_filtered_tpms.csv'
     shell:
         '''
         module load R
-        Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic}
-
+        Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir}
         '''
-rule differntial_expression:
+
+rule differential_expression:
     input: 'results/smoothed_filtered_tpms.csv'
     output:'results/diffexp_efit.Rdata'
     shell:

@@ -1,5 +1,5 @@
-setwd('/data/swamyvs/autoRNAseq')
-#setwd('~/NIH/autoRNAseq')
+#setwd('/data/swamyvs/autoRNAseq')
+setwd(args[3]) 
 library(tximport)
 library(dplyr)
 library(qsmooth)
@@ -65,10 +65,6 @@ lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
 
-
-
-
-
 #cluster with tSNE, then run clustered data throught
 tpms_smoothed_filtered <- lstpms_smoothed
 set.seed(23235)
@@ -77,8 +73,6 @@ tsne_plot <- data.frame(tsne_out$Y,sample_design[sample_design$sample_accession%
 # ggplot(tsne_plot,aes(x=X1,y=X2, col=tissue))+
 #   geom_point(size=2)+
 #   theme_minimal()
-
-
 
 #find outliers based on tsne grouping. calculate the center of each group, and look for points n standard deviations away
 tsne_plot$outlier <- NA
