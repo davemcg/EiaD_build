@@ -64,7 +64,7 @@ def all_fastqs(samp_dict):
 #             return('fastq_files/{}.fastq.gz'.format(sample))
 #
 
-configfile:'config.yaml'
+#configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
 # need to add something to yaml for subtissues
 #subtissue=["Retina_Adult.Tissue",  "RPE_Cell.Line", "ESC_Stem.Cell.Line", "RPE_Adult.Tissue"]
@@ -90,8 +90,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
-		expand('results/diffexp_efit_{level}.Rdata', level = ['gene','transcript'])
-    #,'smoothed_filtered_tpms.csv'
+        expand('results/diffexp_efit_{level}.Rdata', level = ['gene','transcript'])
 '''
 ****PART 1**** download files
 -still need to add missing fastq files
@@ -104,14 +103,12 @@ rule downloadGencode:
     output:ref_fasta,ref_GTF_basic,ref_PA
     shell:
         '''
-
         wget -O ref/gencodeRef.fa.gz {config[refFasta_url]}
         wget -O ref/gencodeAno_bsc.gtf.gz {config[refGTF_basic_url]}
         wget -O ref/gencodePA.fa.gz {config[refPA_url]}
         gunzip ref/gencodeRef.fa.gz
         gunzip ref/gencodeAno_bsc.gtf.gz
         gunzip ref/gencodePA.fa.gz
-
         '''
 
 rule getFQP:
@@ -272,8 +269,8 @@ rule reQuantify_Salmon:
 #	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
 rule gene_quantification_and_normalization:
     input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
-	params: 
-		working_dir = '/data/swamyvs/autoRNAseq'
+    params: 
+        working_dir = config['working_dir'] #'/data/swamyvs/autoRNAseq'
     output:'results/smoothed_filtered_tpms_{level}.csv'
     shell:
         '''
