@@ -89,7 +89,8 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
-    input:'results/diffexp_efit.Rdata'
+    input:
+		expand('results/diffexp_efit_{level}.Rdata', level = ['gene','transcript'])
     #,'smoothed_filtered_tpms.csv'
 '''
 ****PART 1**** download files
@@ -269,20 +270,20 @@ rule reQuantify_Salmon:
 # 	low counts
 #	normalize lengthScaled TPM by library size
 #	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
-rule quality_control:
+rule gene_quantification_and_normalization:
     input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
 	params: 
 		working_dir = '/data/swamyvs/autoRNAseq'
-    output:'results/smoothed_filtered_tpms.csv'
+    output:'results/smoothed_filtered_tpms_{level}.csv'
     shell:
         '''
         module load R
-        Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir}
+        Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} gene {output}
         '''
 
 rule differential_expression:
-    input: 'results/smoothed_filtered_tpms.csv'
-    output:'results/diffexp_efit.Rdata'
+    input: 'results/smoothed_filtered_tpms_{level}.csv'
+    output:'results/diffexp_efit_{level}.Rdata'
     shell:
         '''
         module load R

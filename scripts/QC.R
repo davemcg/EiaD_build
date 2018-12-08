@@ -1,5 +1,3 @@
-#setwd('/data/swamyvs/autoRNAseq')
-setwd(args[3]) 
 library(tximport)
 library(dplyr)
 library(qsmooth)
@@ -7,13 +5,19 @@ library(Rtsne)
 library(ggplot2)
 library(dbscan)
 library(edgeR)
-args=commandArgs(trailingOnly = T)#for gtf
-e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
-
-###write.
+args=commandArgs(trailingOnly = T)
+sample_metadata = args[1]
+gtf_file = args[3]
+working_dir = args[3]
+level = args[4] # transcript or gene level quantification
+output_file = args[5]
+setwd(working_dir)
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
-sample_design <- read.table(args[1],stringsAsFactors = F,header=F, sep = '\t')
-gtf <- rtracklayer::readGFF(args[2])%>%dplyr::filter(type=='transcript')
+
+# load gtf to construct gene <-> transcript_mapping 
+# load sample tissue classification for qsmooth
+sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep = '\t')
+gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','sub-tissue','origin')
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
@@ -24,7 +28,12 @@ samplenames <- strsplit(files0,'/' )%>% sapply(function(x) x[2])
 sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 #load('tpms.Rdata')
 #txi.counts <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon")
-txi.lsTPMs <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon", countsFromAbundance = "lengthScaledTPM")
+# load data at the transcript level or merge to the gene level
+if (level == 'transcript') {
+	txi.lsTPMs <- tximport(files=files0, type = "salmon", countsFromAbundance = "lengthScaledTPM")
+} else {
+	txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
+}
 #save(txi,file = 'tpms.Rdata')
 tpms <- as.data.frame(txi.lsTPMs$counts)
 #counts <- as.data.frame(txi.counts$counts)
@@ -75,6 +84,7 @@ tsne_plot <- data.frame(tsne_out$Y,sample_design[sample_design$sample_accession%
 #   theme_minimal()
 
 #find outliers based on tsne grouping. calculate the center of each group, and look for points n standard deviations away
+e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
 tsne_plot$outlier <- NA
 for(t in tsne_plot$tissue){
   tsne.tissue <- filter(tsne_plot,tissue==t)
@@ -91,6 +101,6 @@ tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 #   ggtitle('outlier from tSNE data')+
 #   theme_minimal()
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
-write.csv(trimmed_counts_smoothed,'results/smoothed_filtered_tpms.csv')
+write_csv(trimmed_counts_smoothed, path = output_file))
 
 
