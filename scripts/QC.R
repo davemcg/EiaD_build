@@ -7,7 +7,7 @@ library(dbscan)
 library(edgeR)
 args=commandArgs(trailingOnly = T)
 sample_metadata = args[1]
-gtf_file = args[3]
+gtf_file = args[2]
 working_dir = args[3]
 level = args[4] # transcript or gene level quantification
 output_file = args[5]
@@ -30,7 +30,7 @@ sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 #txi.counts <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon")
 # load data at the transcript level or merge to the gene level
 if (level == 'transcript') {
-	txi.lsTPMs <- tximport(files=files0, type = "salmon", countsFromAbundance = "lengthScaledTPM")
+	txi.lsTPMs <- tximport(files=files0, txOut=TRUE, type = "salmon", countsFromAbundance = "lengthScaledTPM")
 } else {
 	txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
 }
@@ -49,7 +49,7 @@ tpms <- tpms[keep_genes,]
 sample_medians <- apply(tpms,2,function(x) median(x))
 
 # more genes => lower medians, looks like 3 givees results most similar to david, see comparingQC.r
-keep_median <- which(sample_medians>50)# criteria for removing samples with low counts
+keep_median <- which(sample_medians>1)# criteria for removing samples with low counts
 # removed <- samplenames[which(sample_medians<=50)]
 # intersect(d.removed,removed)%>%length
 # View(sample_design[removed,])
@@ -68,7 +68,7 @@ lsTPM_librarySize <- norm_counts %*% diag(correction)
 colnames(lsTPM_librarySize) <- colnames(tpms)
 
 #quantile normalize samples
-sample_design <- sample_design[sample_design$sample_accession%in%colnames(lsTPM_librarySize),]
+sample_design <- sample_design %>% filter(sample_accession  %in% colnames(lsTPM_librarySize))
 qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$tissue))
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
@@ -76,6 +76,7 @@ colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
 
 #cluster with tSNE, then run clustered data throught
 tpms_smoothed_filtered <- lstpms_smoothed
+print(dim(tpms_smoothed_filtered))
 set.seed(23235)
 tsne_out <- Rtsne(as.matrix(log2(t(tpms_smoothed_filtered)+1)),perplexity = 40, check_duplicates = FALSE, theta=0.0 )
 tsne_plot <- data.frame(tsne_out$Y,sample_design[sample_design$sample_accession%in%colnames(tpms_smoothed_filtered),])
@@ -101,6 +102,6 @@ tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 #   ggtitle('outlier from tSNE data')+
 #   theme_minimal()
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
-write_csv(trimmed_counts_smoothed, path = output_file))
+readr::write_csv(trimmed_counts_smoothed, path = output_file)
 
 
