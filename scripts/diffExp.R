@@ -2,6 +2,7 @@
 setwd('/data/swamyvs/autoRNAseq')
 library(tximport)
 library(dplyr)
+library(data.table)
 library(limma)
 library(edgeR)
 library(qsmooth)
@@ -31,13 +32,19 @@ vfit_eye_gtex <- lmFit(v_eye_gtex, design_eye_and_gtex)
 
 
 
-# combn(unique(subtissue),2) %>% 
-#     t() %>% 
-#     data.table() %>% 
-#     mutate(name=paste(V2,V1,sep='_vs_'),
-#            contrast=paste(V2,V1,sep='-'),
-#            all_makeContrasts=paste(name,'=\"',contrast,'\",\n',sep='')) %>% 
-#     .[['all_makeContrasts']] %>% cat()
+conts <- combn(unique(subtissue),2) %>%
+    t() %>%
+    data.table() %>%
+    mutate(name=paste(V2,V1,sep='_vs_'),
+           contrast=paste(V2,V1,sep='-'),
+           tissue_2=strsplit(V2,'_')%>%lapply(function(x)x[[1]]), 
+           tissue_1=strsplit(V1,'_')%>%lapply(function(x)x[[1]]),
+           type_2= strsplit(V2,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
+           type_1= strsplit(V1,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
+           cont_name= paste0(tissue_2,' (',type_2,') vs ',tissue_1,' (',type_1,')'))
+all_conts <- conts$name
+names(all_conts) <- conts$cont_names
+save(all_conts,file='results/de_comparison_name_list.Rdata')
 cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.Line-RPE_Stem.Cell.Line",
     ESC_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="ESC_Stem.Cell.Line-RPE_Stem.Cell.Line",
     Retina_Adult.Tissue_vs_RPE_Stem.Cell.Line="Retina_Adult.Tissue-RPE_Stem.Cell.Line",

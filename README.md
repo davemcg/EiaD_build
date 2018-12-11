@@ -1,6 +1,2 @@
-# autoRNAseq
-Snakemake pipeline for eyeIntegration RNA-seq processing
-
-Goal: 
-  Take input as SRA ID *or* fastq path, run salmon-based quantification (matched to species), then do basic QC to remove poor quality samples
-
+# Auto Build eyeIntegration
+Snakemake pipeline to build bulk RNA-seq gene/transcript quantifications (and related analyses) for https://eyeintegration.nei.nih.gov from raw sequence data (fastq) and hand-curated metadata (Tissue and Sub_Tissue)
