@@ -27,24 +27,7 @@ sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep
 gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','sub-tissue','origin')
-##generate gene, tx and core tight files
 
-sra_con <- dbConnect(RSQLite::SQLite(),sqlfile)
-que <- "SELECT * FROM sra WHERE sample_accession='BLANK'"
-eye_tissue <- c('Retina','RPE','Cornea','ESC')
-core_tight <- lapply(sample_design$sample_accession,function(x) dbGetQuery(sra_con, gsub('BLANK',x,que)))%>%do.call(rbind,.)%>%
-  distinct%>%select(study_accession ,study_title,study_abstract,sample_accession,sample_attribute)%>%
-  left_join(sample_design[,c(1,4,5)],by='sample_accession')
-core_tight$origin <-  strsplit(core_tight[,'sub-tissue'],'_')%>%sapply(function(x)ifelse(x[[1]]%in%eye_tissue,x[[2]],'Tissue'))
-save(core_tight,file = 'results/core_tight.Rdata')
-
-genes= anno$gene_name %>% unique
-save(genes, file='results/gene_names.Rdata')
-
-tx=anno[,c("gene_name", "transcript_id")]%>%distinct%>%split(.[,2])%>%sapply(function(x) paste0(x[,1],' (',x[,2],')'))  
-save(tx, file='results/tx_gene_names.Rdata')
-
-##read in quant files
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
 samplenames <- strsplit(files0,'/' )%>% sapply(function(x) x[2])
 sample_design <-  filter(sample_design, sample_accession%in%samplenames)
@@ -87,7 +70,7 @@ if (level == 'transcript'){
   tpms[is.na(tpms)] <- 0
   keep_genes <- which(rowSums(tpms)>=ncol(tpms)*1)# revove gene w less than an average count of 1
   tpms <- tpms[keep_genes,keep_median]
-  
+
 }
 #normalize for library size
 norm <- DGEList(tpms)
@@ -135,4 +118,3 @@ tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
 trimmed_counts_smoothed <- trimmed_counts_smoothed %>% rownames_to_column('ID')
 write_csv(trimmed_counts_smoothed, path = output_file)
-

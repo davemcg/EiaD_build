@@ -64,7 +64,7 @@ def all_fastqs(samp_dict):
 #             return('fastq_files/{}.fastq.gz'.format(sample))
 #
 
-#configfile:'config.yaml'
+configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
 # need to add something to yaml for subtissues
 #subtissue=["Retina_Adult.Tissue",  "RPE_Cell.Line", "ESC_Stem.Cell.Line", "RPE_Adult.Tissue"]
@@ -91,7 +91,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
-        expand('results/diffexp_efit_{level}.Rdata', level = ['gene','transcript'])
+        expand('results/diffexp_efit_{level}.Rdata', level = ['gene','transcript']), 'results/core_tight.Rdata','results/tx_names.Rdata','results/gene_names.Rdata'
 '''
 ****PART 1**** download files
 -still need to add missing fastq files
@@ -270,7 +270,7 @@ rule reQuantify_Salmon:
 #	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
 rule gene_quantification_and_normalization:
     input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
-    params: 
+    params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:'results/smoothed_filtered_tpms_{level}.csv'
     shell:
@@ -278,10 +278,18 @@ rule gene_quantification_and_normalization:
         module load R
         Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {output}
         '''
+rule make_meta_info:
+    input:expand('results/smoothed_filtered_tpms_{level}.csv',level=['gene','transcript'])
+    output: 'results/core_tight.Rdata','results/tx_names.Rdata','results/gene_names.Rdata'
+    shell:
+        '''
+        module load R
+        Rscript {config[scripts_dir]}/make_meta_info.R {config[sampleFile]} {ref_GTF_basic} {config[sqlfile]} {input[0]} {input[1]}
+        '''
 
 rule differential_expression:
     input: 'results/smoothed_filtered_tpms_{level}.csv'
-    params: 
+    params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output: 'results/diffexp_efit_{level}.Rdata'
     shell:

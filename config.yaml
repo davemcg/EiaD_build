@@ -8,4 +8,5 @@ refGTF_basic_url: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/relea
 refPA_url: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/GRCh38.primary_assembly.genome.fa.gz'
 synth_body: 'ref/synth_body.txt'
 tx_not_in_gtf: 'ref/tx_not_in_gtf'
-working_dir: '/data/mcgaugheyd/projects/nei/mcgaughey/auto_eyeIntegration' 
+working_dir: '/data/mcgaugheyd/projects/nei/mcgaughey/auto_eyeIntegration'
+sqlfile: 'ref/SRAmetadb.11-06-18.sqlite' 
