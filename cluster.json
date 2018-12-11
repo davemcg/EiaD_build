@@ -46,7 +46,7 @@
 		"mem" : "16g",
 		"cpus-per-task": "8"
 	},
-	"quality_control" :
+	"gene_quantification_and_normalization" :
 	{
 		"mem" : "24g"
 	}

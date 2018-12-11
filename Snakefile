@@ -75,6 +75,8 @@ tissues=['Retina','RPE','ESC','Cornea','body']
 # subtissues_PE=['Retina_Adult.Tissue','.Pancreas.']
 # subtissues_SE=['RPE_Stem.Cell.Line','RPE_Cell.Line']
 sample_names=sample_dict.keys()
+print(sample_names)
+
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
 loadSalmon= "module load {} && ".format(config['salmon_version'])
 salmonindex='ref/salmonindex'
@@ -199,7 +201,7 @@ rule find_tx_low_usage:
     shell:
         '''
         module load R
-        Rscript scripts/soneson_low_usage.R {ref_GTF_basic}
+        Rscript {config[scripts_dir]}/soneson_low_usage.R {ref_GTF_basic}
         '''
 
 rule remove_tx_low_usage:
@@ -275,7 +277,7 @@ rule gene_quantification_and_normalization:
     shell:
         '''
         module load R
-        Rscript scripts/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} gene {output}
+        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {output}
         '''
 
 rule differential_expression:
@@ -284,5 +286,5 @@ rule differential_expression:
     shell:
         '''
         module load R
-        Rscript scripts/diffExp.R {config[sampleFile]}
+        Rscript {config[scripts_dir]}/diffExp.R {config[sampleFile]}
         '''
