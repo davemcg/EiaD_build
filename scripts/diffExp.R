@@ -21,7 +21,7 @@ gtex_sample <- sample_n(body_samples,176)
 # getting different samples than david, going to use his list
 # DM: nah, let's use yours
 # load('ref/david_gtex_subsamples.RData')# l> gtex_sub_samples
-gtex_sample <- filter(sample_table,sample%in%gtex_sub_samples)
+# gtex_sample <- filter(sample_table,sample%in%gtex_sub_samples)
 gtex_sample$tissue <- gtex_sample$subtissue <-  'Body'
 deg_sample_table <- rbind(eye_samples,gtex_sample)
 deg_counts <- lstpms_smoothed[,deg_sample_table$sample]
