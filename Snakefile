@@ -75,7 +75,6 @@ tissues=['Retina','RPE','ESC','Cornea','body']
 # subtissues_PE=['Retina_Adult.Tissue','.Pancreas.']
 # subtissues_SE=['RPE_Stem.Cell.Line','RPE_Cell.Line']
 sample_names=sample_dict.keys()
-print(sample_names)
 
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
 loadSalmon= "module load {} && ".format(config['salmon_version'])
@@ -272,7 +271,7 @@ rule reQuantify_Salmon:
 rule gene_quantification_and_normalization:
     input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
     params: 
-        working_dir = config['working_dir'] #'/data/swamyvs/autoRNAseq'
+        working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:'results/smoothed_filtered_tpms_{level}.csv'
     shell:
         '''
@@ -282,9 +281,11 @@ rule gene_quantification_and_normalization:
 
 rule differential_expression:
     input: 'results/smoothed_filtered_tpms_{level}.csv'
-    output:'results/diffexp_efit_{level}.Rdata'
+    params: 
+        working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
+    output: 'results/diffexp_efit_{level}.Rdata'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/diffExp.R {config[sampleFile]}
+        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output}
         '''

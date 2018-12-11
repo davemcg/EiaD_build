@@ -7,6 +7,7 @@ library(dbscan)
 library(edgeR)
 library(RSQLite)
 library(SRAdb)
+library(readr)
 args=commandArgs(trailingOnly = T)
 
 
@@ -15,7 +16,6 @@ gtf_file = args[2]
 working_dir = args[3]
 level = args[4] # transcript or gene level quantification
 output_file = args[5]
-sqlfile <- args[6]
 setwd(working_dir)
 
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
@@ -52,14 +52,10 @@ sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 #txi.counts <- tximport(files=files0,tx2gene =  anno[,3:2],type = "salmon")
 # load data at the transcript level or merge to the gene level
 if (level == 'transcript') {
-<<<<<<< HEAD
-	txi.lsTPMs <- tximport(files=files0, txOut=TRUE, type = "salmon", countsFromAbundance = "lengthScaledTPM")
-=======
 	txi.lsTPMs_tx <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = "lengthScaledTPM")
 	txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
 	tpms_tx <- as.data.frame(txi.lsTPMs_tx$counts)
 	colnames(tpms_tx) <- samplenames
->>>>>>> 6ef6baff4c91e660be0954da60dd8d1287e5aa9b
 } else {
 	txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
 }
@@ -137,7 +133,6 @@ tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 #   ggtitle('outlier from tSNE data')+
 #   theme_minimal()
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
-readr::write_csv(trimmed_counts_smoothed, path = output_file)
+trimmed_counts_smoothed <- trimmed_counts_smoothed %>% rownames_to_column('ID')
+write_csv(trimmed_counts_smoothed, path = output_file)
 
-k <- filter(sample_design, sample_accession%in%colnames(trimmed_counts_smoothed), tissue%in%c('Retina','RPE','Cornea'))#%>%table(.[,'tissue'])
-table(k$tissue)

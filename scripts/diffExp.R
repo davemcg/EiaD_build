@@ -1,22 +1,26 @@
-#setwd('~/NIH/autoRNAseq/')
-setwd('/data/swamyvs/autoRNAseq')
 library(tximport)
 library(dplyr)
 library(data.table)
 library(limma)
 library(edgeR)
 library(qsmooth)
+library(readr)
 args=commandArgs(trailingOnly = T)
-sample_table <- read.table(args[1],stringsAsFactors = F, header = F,sep = '\t')
-lstpms_smoothed <- read.csv('results/smoothed_filtered_tpms.csv',row.names = 1)
+
+setwd(args[1])
+sample_table <- read.table(args[2],stringsAsFactors = F, header = F,sep = '\t')
+lstpms_smoothed <- read.csv(args[3], row.names = 1)  #'results/smoothed_filtered_tpms.csv',row.names = 1)
+output_file <- args[4]
+
 colnames(sample_table) <- c('sample','run','paired','tissue','subtissue','origin')
 sample_table <- filter(sample_table,sample%in%colnames(lstpms_smoothed))
 eye_samples <- filter(sample_table,tissue%in%c('Retina','RPE','Cornea','ESC'))
 body_samples <- filter(sample_table,!tissue%in%c('Retina','RPE','Cornea','ESC'))
 set.seed(123421)
 gtex_sample <- sample_n(body_samples,176)
-#getting different samples than david, going to use his list
-load('ref/david_gtex_subsamples.RData')# l> gtex_sub_samples
+# getting different samples than david, going to use his list
+# DM: nah, let's use yours
+# load('ref/david_gtex_subsamples.RData')# l> gtex_sub_samples
 gtex_sample <- filter(sample_table,sample%in%gtex_sub_samples)
 gtex_sample$tissue <- gtex_sample$subtissue <-  'Body'
 deg_sample_table <- rbind(eye_samples,gtex_sample)
@@ -110,4 +114,4 @@ cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.L
 vfit_all <- lmFit(v_eye_gtex, design_eye_and_gtex)
 vfit_all <- contrasts.fit(vfit_all, contrasts=cont.matrix_all)
 efit_all_vinny <- eBayes(vfit_all)
-save(efit_all_vinny,file='results/diffexp_efit.Rdata')
+save(efit_all_vinny,file=output_file)
