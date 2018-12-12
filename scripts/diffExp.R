@@ -14,8 +14,8 @@ output_file <- args[4]
 
 colnames(sample_table) <- c('sample','run','paired','tissue','subtissue','origin')
 sample_table <- filter(sample_table,sample%in%colnames(lstpms_smoothed))
-eye_samples <- filter(sample_table,tissue%in%c('Retina','RPE','Cornea','ESC'))
-body_samples <- filter(sample_table,!tissue%in%c('Retina','RPE','Cornea','ESC'))
+eye_samples <- filter(sample_table,tissue%in%c('Retina','RPE','Cornea','ESC','Lens'))
+body_samples <- filter(sample_table,!tissue%in%c('Retina','RPE','Cornea','ESC', 'Lens', 'RetinalEpithelium'))
 set.seed(123421)
 gtex_sample <- sample_n(body_samples,176)
 # getting different samples than david, going to use his list

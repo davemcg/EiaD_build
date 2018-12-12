@@ -58,6 +58,6 @@ genes= anno$gene_name %>% unique
 save(genes, file= gene_file)
 tx_qc_tpms=read_csv(tx_qc_file)
 tx=gtf[,c("gene_name", "transcript_id")] %>%
-  distinct%>%filter(transcript_id% in% tx_qc_tpms$ID)%>% split(.[,2]) %>%
+  distinct%>%filter(transcript_id %in% tx_qc_tpms$ID)%>% split(.[,2]) %>%
   sapply(function(x) paste0(x[,1],' (',x[,2],')'))
 save(tx, file=tx_file)
