@@ -278,13 +278,29 @@ rule gene_quantification_and_normalization:
         module load R
         Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {output}
         '''
+
+# output sample metadata and gene/tx lists for eyeIntegration
 rule make_meta_info:
-    input:expand('results/smoothed_filtered_tpms_{level}.csv',level=['gene','transcript'])
-    output: 'results/core_tight.Rdata','results/tx_names.Rdata','results/gene_names.Rdata'
+    input:
+        expand('results/smoothed_filtered_tpms_{level}.csv',level=['gene','transcript'])
+    params:
+        working_dir = config['working_dir']
+    output:
+        metadata = 'results/core_tight.Rdata',
+        tx_names = 'results/tx_names.Rdata',
+        gene_names = 'results/gene_names.Rdata'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/make_meta_info.R {config[sampleFile]} {ref_GTF_basic} {config[sqlfile]} {input[0]} {input[1]}
+        Rscript {config[scripts_dir]}/make_meta_info.R \
+          {config[sampleFile]} \
+          {ref_GTF_basic} \
+          {config[sqlfile]} \
+          {input} \
+          {params.working_dir} \
+          {output.metadata} \
+          {output.tx_names} \
+          {output.gene_names}
         '''
 
 rule differential_expression:
