@@ -149,5 +149,11 @@ cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.L
 
 vfit_all <- lmFit(v_eye_gtex, design_eye_and_gtex)
 vfit_all <- contrasts.fit(vfit_all, contrasts=cont.matrix_all)
-efit_all_vinny <- eBayes(vfit_all)
-save(efit_all_vinny,file=output_file)
+efit_all <- eBayes(vfit_all)
+# turn limma data into a list of dataframes
+limma_de_data = list()
+for (i in colnames(efit_all)){
+  limma_de_data[[i]] <- topTable(efit_all, coef=i, adjust.method = 'fdr', number=300000)
+}
+
+save(limma_de_data, file=output_file)
