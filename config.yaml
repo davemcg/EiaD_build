@@ -1,5 +1,5 @@
 refFasta_url: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.transcripts.fa.gz'
-sampleFile: '/home/mcgaugheyd/git/autoRNAseq/sampleTable.txt'
+sampleFile: '/home/mcgaugheyd/git/autoRNAseq/sampleTable1128_tissues.tab'
 salmon_version: 'salmon/0.11.0'
 scripts_dir: '/home/mcgaugheyd/git/autoRNAseq/scripts'
 sratoolkit_version: 'sratoolkit/2.9.2'
