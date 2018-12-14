@@ -36,4 +36,4 @@ all_ratios[is.nan(as.matrix(all_ratios))] <- 0
 low_usage <- which(rowSums(all_ratios)<=.05)
 print(paste(length(low_usage), 'Transcripts Removed'))
 tx_to_remove <- tx_c[low_usage,'transcript_id']
-write(tx_to_remove,'tx_for_removal',sep='\n')
+write(tx_to_remove,'tx_for_removal.txt',sep='\n')
