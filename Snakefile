@@ -44,18 +44,8 @@ def lookupRunfromID(card,sample_dict):
                 res.append('fastqParts/{}.fastq.gz'.format(file))
     return(res)
 
-
-
 #configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
-# need to add something to yaml for subtissues
-#subtissue=["Retina_Adult.Tissue",  "RPE_Cell.Line", "ESC_Stem.Cell.Line", "RPE_Adult.Tissue"]
-subtissues_SE=["RPE_Stem.Cell.Line","RPE_Cell.Line","Retina_Adult.Tissue","RPE_Fetal.Tissue","ESC_Stem.Cell.Line","Cornea_Adult.Tissue","Cornea_Fetal.Tissue","Cornea_Cell.Line","Retina_Stem.Cell.Line",'body']
-subtissues_PE=["Retina_Adult.Tissue", "RPE_Cell.Line", "ESC_Stem.Cell.Line" , "RPE_Adult.Tissue",'body' ]# add body back in  at some point
-tissues=['Retina','RPE','ESC','Cornea','body']
-# tissues=['Retina','RPE','Pancreas','body']
-# subtissues_PE=['Retina_Adult.Tissue','.Pancreas.']
-# subtissues_SE=['RPE_Stem.Cell.Line','RPE_Cell.Line']
 sample_names=sample_dict.keys()
 
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
@@ -73,17 +63,12 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
-        expand('results/limma_DE_{level}.Rdata', level = ['gene','transcript']), 
+        expand('results/mean_rank_decile_{level}.tsv', level = ['gene','transcript']), 
         'results/core_tight.Rdata',
         'results/tx_names.Rdata',
 		'results/gene_names.Rdata'
 '''
 ****PART 1**** download files
--still need to add missing fastq files
--gffread needs indexed fasta
--need to add versioning of tools to yaml
-- the gencode pc tx has ~40k tx not in the gencode basic gtf, i looked and all the missing ones are not protein coding,
-so we're gonna remove the tx  not in the gtf from the fasta
 '''
 rule downloadGencode:
     output:ref_fasta,ref_GTF_basic,ref_PA
@@ -136,7 +121,6 @@ rule aggFastqsPE:
 
 '''
 ****PART 2*** Initial quantification
--went back to tracking quant.sf since bad fastqs were removed
 '''
 rule build_salmon_index:
     input:  ref_fasta
@@ -209,7 +193,6 @@ rule remove_tx_low_usage:
 
 '''
 ***PART 4*** requantify salmon
--can't reverse index in shell apparently
 '''
 
 rule rebuild_salmon_index:
@@ -246,6 +229,9 @@ rule reQuantify_Salmon:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed to align'.format(id))
 
+'''
+***** Produce files for eyeIntegration web app
+'''
 # load all salmon quant with with tximport (lengthScaledTPM)
 # run QSmooth normalization
 # remove genes with near 0 counts for all samples
@@ -298,3 +284,23 @@ rule differential_expression:
         module load R
         Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output}
         '''
+
+# for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
+rule calculate_mean_rank_decile:
+    input:
+        lsTPM_file = 'results/smoothed_filtered_tpms_{level}.csv',
+        metadata_file = 'results/core_tight.Rdata',
+    params:
+        working_dir = config['working_dir']
+    output:
+        'results/mean_rank_decile_{level}.tsv'
+    shell:
+        '''
+        module load R
+        Rscript {config[scripts_dir]}/calculate_mean_rank_decile.R \
+          {params.working_dir} \
+          {input.lsTPM_file} \
+          {input.metadata_file} \
+          {output}
+        '''
+

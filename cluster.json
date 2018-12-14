@@ -49,6 +49,9 @@
 	"gene_quantification_and_normalization" :
 	{
 		"mem" : "24g"
+	},
+	"calculate_mean_rank_decile" :
+	{
+		"mem" : "24g"
 	}
-
 }
