@@ -45,26 +45,8 @@ def lookupRunfromID(card,sample_dict):
     return(res)
 
 
-def all_fastqs(samp_dict):
-    res=[]
-    for sample in samp_dict.keys():
-        if samp_dict[sample]['paired']:
-            res.append('fastq_files/{}_1.fastq.gz'.format(sample))
-            res.append('fastq_files/{}_2.fastq.gz'.format(sample))
-        else:
-            res.append('fastq_files/{}.fastq.gz'.format(sample))
-    return(res)
-# def samples_for_salmon(sample, sample_dict):
-#     if 'E-MTAB' in sample :
-#         return('{}.bam'.format(sample))
-#     else:
-#         if sample_dict[sample]['paired']:
-#             return(['fastq_files/{}_1.fastq.gz'.format(sample),('fastq_files/{}_2.fastq.gz'.format(sample))])
-#         else:
-#             return('fastq_files/{}.fastq.gz'.format(sample))
-#
 
-configfile:'config.yaml'
+#configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
 # need to add something to yaml for subtissues
 #subtissue=["Retina_Adult.Tissue",  "RPE_Cell.Line", "ESC_Stem.Cell.Line", "RPE_Adult.Tissue"]
@@ -91,7 +73,10 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
-        expand('results/diffexp_efit_{level}.Rdata', level = ['gene','transcript']), 'results/core_tight.Rdata','results/tx_names.Rdata','results/gene_names.Rdata'
+        expand('results/limma_DE_{level}.Rdata', level = ['gene','transcript']), 
+        'results/core_tight.Rdata',
+        'results/tx_names.Rdata',
+		'results/gene_names.Rdata'
 '''
 ****PART 1**** download files
 -still need to add missing fastq files
@@ -196,7 +181,7 @@ rule run_salmon:
 
 rule find_tx_low_usage:
     input: expand('quant_files/{sampleID}/quant.sf', sampleID=sample_names), 'ref/gencodeAno_bsc.gtf'
-    output:'tx_for_removal'
+    output:'tx_for_removal.txt'
     shell:
         '''
         module load R
@@ -269,7 +254,7 @@ rule reQuantify_Salmon:
 #	normalize lengthScaled TPM by library size
 #	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
 rule gene_quantification_and_normalization:
-    input:expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
+    input: expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:'results/smoothed_filtered_tpms_{level}.csv'
@@ -307,7 +292,7 @@ rule differential_expression:
     input: 'results/smoothed_filtered_tpms_{level}.csv'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
-    output: 'results/diffexp_efit_{level}.Rdata'
+    output: 'results/limma_DE_{level}.Rdata'
     shell:
         '''
         module load R
