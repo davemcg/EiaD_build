@@ -63,6 +63,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
+        expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene','transcript']),
         expand('results/mean_rank_decile_{level}.tsv', level = ['gene','transcript']), 
         'results/core_tight.Rdata',
         'results/tx_names.Rdata',
@@ -278,7 +279,9 @@ rule differential_expression:
     input: 'results/smoothed_filtered_tpms_{level}.csv'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
-    output: 'results/limma_DE_{level}.Rdata'
+    output: 
+        limma_object = 'results/limma_DE_object_{level}.Rdata',
+        list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
     shell:
         '''
         module load R
