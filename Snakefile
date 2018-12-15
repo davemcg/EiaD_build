@@ -67,7 +67,8 @@ rule all:
         expand('results/mean_rank_decile_{level}.tsv', level = ['gene','transcript']), 
         'results/core_tight.Rdata',
         'results/tx_names.Rdata',
-		'results/gene_names.Rdata'
+        'results/gene_names.Rdata',
+        'results/all_vs_all_GO.Rdata'
 '''
 ****PART 1**** download files
 '''
@@ -280,12 +281,13 @@ rule differential_expression:
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output: 
+        comparisons = 'results/de_comparisons_{level}.txt',
         limma_object = 'results/limma_DE_object_{level}.Rdata',
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output}
+        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output.limma_object} {output.list_of_dataframes}
         '''
 
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
@@ -307,3 +309,41 @@ rule calculate_mean_rank_decile:
           {output}
         '''
 
+# build differential gene lists for all comparisons done in 
+# differential expression for GO enrichment
+rule differential_gene_lists:
+    input:
+        limma_object = 'results/limma_DE_object_gene.Rdata',
+    params:
+        working_dir = config['working_dir']
+    output:
+        up = 'results/up_gene_comparison_lists.Rdata',
+        down = 'results/down_gene_comparison_lists.Rdata',
+        all_genes = 'results/all_genes.Rdata'
+    shell:
+        '''
+        module load R
+        Rscript {config[scripts_dir]}/find_diff_expressed_gene_lists.R \
+          {params.working_dir} \
+          {input} \
+          {output}
+        '''
+
+# calculate GO term enrichments
+rule GO_term_enrichment:
+    input:
+        limma_object = 'results/limma_DE_object_gene.Rdata'
+    params:
+        working_dir = config['working_dir']
+    threads: 10
+    output:
+        all_vs_all_go = 'results/all_vs_all_GO.Rdata'
+    shell:
+       '''
+       module load R
+       Rscript {config[scripts_dir]}/calculate_GO_enrichment.R \
+         {params.working_dir} \
+         {threads} \
+         {input} \
+         {output}
+       ''' 
