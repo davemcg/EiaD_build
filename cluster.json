@@ -53,5 +53,9 @@
 	"calculate_mean_rank_decile" :
 	{
 		"mem" : "24g"
+	},
+	"GO_term_enrichment" :
+	{
+		"mem" : "64g"
 	}
 }
