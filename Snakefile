@@ -170,7 +170,7 @@ rule find_tx_low_usage:
         '''
 
 rule remove_tx_low_usage:
-    input:'tx_for_removal',ref_fasta
+    input:'tx_for_removal.txt',ref_fasta
     output: 'ref/gencodeRef_trimmed.fa'
     run:
         with open(input[1]) as infasta, open('tx_for_removal') as bad_tx, open(output[0],'w+') as outfasta:
@@ -275,7 +275,7 @@ rule differential_expression:
     input: 'results/smoothed_filtered_tpms_{level}.csv'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
-    output: 
+    output:
         comparisons = 'results/de_comparisons_{level}.txt',
         limma_object = 'results/limma_DE_object_{level}.Rdata',
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
@@ -304,7 +304,7 @@ rule calculate_mean_rank_decile:
           {output}
         '''
 
-# build differential gene lists for all comparisons done in 
+# build differential gene lists for all comparisons done in
 # differential expression for GO enrichment
 rule differential_gene_lists:
     input:
@@ -359,7 +359,7 @@ rule make_SQLite_db:
        '''
        module load R
        Rscript {config[scripts_dir]}/make_sqlite_db.R \
-		 {params.working_dir} \
+         {params.working_dir} \
          {input} \
          {output}
        '''
