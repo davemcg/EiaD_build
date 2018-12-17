@@ -63,12 +63,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
-        expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene','transcript']),
-        expand('results/mean_rank_decile_{level}.tsv', level = ['gene','transcript']), 
-        'results/core_tight.Rdata',
-        'results/tx_names.Rdata',
-        'results/gene_names.Rdata',
-        'results/all_vs_all_GO.Rdata'
+        'results/eyeIntegration_human_expression_2019_v100.sqlite'
 '''
 ****PART 1**** download files
 '''
@@ -347,3 +342,24 @@ rule GO_term_enrichment:
          {input} \
          {output}
        ''' 
+
+# create SQLite expression db
+rule make_SQLite_db:
+    input:
+        tpms = expand('results/smoothed_filtered_tpms_{level}.csv', level = ['gene', 'transcript']),
+        tx_names = 'results/tx_names.Rdata',
+        DE = expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene', 'transcript']),
+        GO = 'results/all_vs_all_GO.Rdata',
+        mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript'])
+    params:
+        working_dir = config['working_dir']
+    output:
+        'results/eyeIntegration_human_expression_2019_v100.sqlite'
+    shell:
+       '''
+       module load R
+       Rscript {config[scripts_dir]}/make_sqlite_db.R \
+		 {params.working_dir} \
+         {input} \
+         {output}
+       '''
