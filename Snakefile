@@ -64,7 +64,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 rule all:
     input:
         expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene','transcript']),
-        expand('results/mean_rank_decile_{level}.tsv', level = ['gene','transcript']), 
+        expand('results/mean_rank_decile_{level}.tsv', level = ['gene','transcript']),
         'results/core_tight.Rdata',
         'results/tx_names.Rdata',
         'results/gene_names.Rdata',
@@ -175,7 +175,7 @@ rule find_tx_low_usage:
         '''
 
 rule remove_tx_low_usage:
-    input:'tx_for_removal',ref_fasta
+    input:'tx_for_removal.txt',ref_fasta
     output: 'ref/gencodeRef_trimmed.fa'
     run:
         with open(input[1]) as infasta, open('tx_for_removal') as bad_tx, open(output[0],'w+') as outfasta:
@@ -280,7 +280,7 @@ rule differential_expression:
     input: 'results/smoothed_filtered_tpms_{level}.csv'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
-    output: 
+    output:
         comparisons = 'results/de_comparisons_{level}.txt',
         limma_object = 'results/limma_DE_object_{level}.Rdata',
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
@@ -309,7 +309,7 @@ rule calculate_mean_rank_decile:
           {output}
         '''
 
-# build differential gene lists for all comparisons done in 
+# build differential gene lists for all comparisons done in
 # differential expression for GO enrichment
 rule differential_gene_lists:
     input:
@@ -346,4 +346,4 @@ rule GO_term_enrichment:
          {threads} \
          {input} \
          {output}
-       ''' 
+       '''
