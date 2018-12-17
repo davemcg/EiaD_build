@@ -49,7 +49,7 @@ conts <- combn(unique(subtissue),2) %>%
          cont_name= paste0(tissue_2,' (',type_2,') vs ',tissue_1,' (',type_1,')'))
 all_conts <- conts$name
 names(all_conts) <- conts$cont_names
-save(all_conts,file='results/de_comparison_name_list.Rdata')
+write(all_conts,file='results/de_comparisons.txt')
 cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.Line-RPE_Stem.Cell.Line",
                                  ESC_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="ESC_Stem.Cell.Line-RPE_Stem.Cell.Line",
                                  Retina_Adult.Tissue_vs_RPE_Stem.Cell.Line="Retina_Adult.Tissue-RPE_Stem.Cell.Line",
