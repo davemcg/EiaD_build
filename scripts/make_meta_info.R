@@ -11,6 +11,7 @@ setwd(args[6])
 metadata_file <- args[7]
 tx_file <- args[8]
 gene_file <- args[9]
+gene_tx_info <- args[10]
 
 sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep = '\t')
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','Tissue','Sub_Tissue','Origin')
@@ -51,11 +52,12 @@ save(core_tight,file = metadata_file)
 
 gtf <- rtracklayer::readGFF(gtf_file) %>% 
   dplyr::filter(type=='transcript')
-anno <- gtf[,c("gene_id", "gene_name", "transcript_id")] %>% 
+anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type", "transcript_type")] %>% 
   filter(gene_name%in%gene_qc_tpms$ID)
 
 genes= anno$gene_name %>% unique
 save(genes, file= gene_file)
+save(anno, file = gene_tx_info)
 tx_qc_tpms=read_csv(tx_qc_file)
 tx=gtf[,c("gene_name", "transcript_id")] %>%
   distinct%>%filter(transcript_id %in% tx_qc_tpms$ID)%>% split(.[,2]) %>%
