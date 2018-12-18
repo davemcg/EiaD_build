@@ -259,7 +259,8 @@ rule make_meta_info:
     output:
         metadata = 'results/core_tight.Rdata',
         tx_names = 'results/tx_names.Rdata',
-        gene_names = 'results/gene_names.Rdata'
+        gene_names = 'results/gene_names.Rdata',
+        gene_tx_info = 'results/gene_tx_gtf_info.Rdata'
     shell:
         '''
         module load R
@@ -271,7 +272,8 @@ rule make_meta_info:
           {params.working_dir} \
           {output.metadata} \
           {output.tx_names} \
-          {output.gene_names}
+          {output.gene_names} \
+          {output.gene_tx_info}
         '''
 
 rule differential_expression:
