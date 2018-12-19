@@ -47,9 +47,9 @@ conts <- combn(unique(subtissue),2) %>%
          type_2= strsplit(V2,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
          type_1= strsplit(V1,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
          cont_name= paste0(tissue_2,' (',type_2,') vs ',tissue_1,' (',type_1,')'))
-all_conts <- conts$name
-names(all_conts) <- conts$cont_names
-write(all_conts,file='results/de_comparisons.txt')
+de_comparison_contrast_names <- conts$name
+names(de_comparison_contrast_names) <- gsub('\\.', ' ', conts$cont_name)
+save(de_comparison_contrast_names,file='results/de_comparison_name_list.Rdata')
 cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.Line-RPE_Stem.Cell.Line",
                                  ESC_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="ESC_Stem.Cell.Line-RPE_Stem.Cell.Line",
                                  Retina_Adult.Tissue_vs_RPE_Stem.Cell.Line="Retina_Adult.Tissue-RPE_Stem.Cell.Line",
