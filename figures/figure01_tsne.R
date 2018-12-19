@@ -17,7 +17,7 @@ eye_samples <- core_tight %>%
 
 eye_TPM <- tpm_gene[,unique(eye_samples)]
 
-umap_out <- Rtsne::Rtsne(as.matrix(log2(t(eye_TPM)+1)),perplexity = 50, check_duplicates = FALSE, theta=0.0)
+umap_out <- Rtsne::Rtsne(as.matrix(log2(t(eye_TPM)+1)),perplexity = 45, check_duplicates = FALSE, theta=0.0)
 #umap_out <- umap(as.matrix(log2(t(eye_TPM)+1)), n_neighbors = 20, min_dist = 0.001, pca = 50)
 #umap_out <- prcomp(as.matrix(log2(t(eye_TPM)+1)))
 
@@ -39,7 +39,8 @@ center_samples <- umap_plot %>% left_join(.,core_tight)  %>%
   left_join(.,cluster_centers, by=c('Cluster')) %>%
   mutate(Distance = (X1-C1)+(X2-C2)) %>%
   group_by(Cluster) %>%
-  dplyr::slice(which.min(Distance)) %>% 
+  dplyr::slice(which.min(Distance)) %>%
+  dplyr::slice(1) %>% 
   .[['sample_accession']]
 
 # cluster stats
@@ -58,6 +59,18 @@ umap_plot_prep <- umap_plot %>% left_join(.,core_tight)  %>%
   mutate(Label = ifelse(sample_accession %in% center_samples, Label, ""))
 
 umap_plot_prep_eye <- umap_plot_prep
+
+# no color, no label
+ggplot(umap_plot_prep_eye %>% 
+         mutate(Label = case_when(grepl('^0', Label) ~ '', TRUE ~ Label)),aes(x=X1,y=X2)) +
+  scale_shape_manual(values=c(0:20,35:50)) +
+  ggtitle(paste0('Eye tissue t-sne')) +
+  #geom_point(size=16, alpha=0.1, aes(colour=Tissue)) +
+  geom_point(size=6, alpha=0.6, aes(shape=Origin)) +
+  #geom_label_repel(aes(label=Label), alpha=0.8, size=4, box.padding = unit(0.3, "lines")) + 
+  theme_minimal() + xlab('Dimension 1') + ylab('Dimension 2')
+
+# color by tissue
 ggplot(umap_plot_prep_eye %>% 
          mutate(Label = case_when(grepl('^0', Label) ~ '', TRUE ~ Label)),aes(x=X1,y=X2)) +
   scale_shape_manual(values=c(0:20,35:50)) +
@@ -66,11 +79,21 @@ ggplot(umap_plot_prep_eye %>%
   geom_point(size=6, alpha=0.6, aes(shape=Origin)) +
   geom_label_repel(aes(label=Label), alpha=0.8, size=4, box.padding = unit(0.3, "lines")) + theme_minimal() + xlab('Dimension 1') + ylab('Dimension 2')
 
+# color by origin
 ggplot(umap_plot_prep_eye %>% 
          mutate(Label = case_when(grepl('^0', Label) ~ '', TRUE ~ Label)),aes(x=X1,y=X2)) +
   scale_shape_manual(values=c(0:20,35:50)) +
   ggtitle(paste0('Eye tissue t-sne')) +
-  geom_point(size=16, alpha=0.1, aes(colour=Tissue)) +
+  geom_point(size=16, alpha=0.1, aes(colour=Origin)) +
   geom_point(size=6, alpha=0.6, aes(shape=Origin)) +
   geom_label_repel(aes(label=Label), alpha=0.8, size=4, box.padding = unit(0.3, "lines")) + theme_minimal() + xlab('Dimension 1') + ylab('Dimension 2')
 
+# only organoid
+ggplot(umap_plot_prep_eye %>% 
+         mutate(Label = case_when(grepl('^0', Label) ~ '', TRUE ~ Label)),
+       aes(x=X1,y=X2)) +
+  scale_shape_manual(values=c(0:20,35:50)) +
+  ggtitle(paste0('Eye tissue t-sne')) +
+  geom_point(data = umap_plot_prep_eye %>% filter(Origin == 'Organoid'), size=16, alpha = 0.1, color = '#00BFC4') +
+  geom_point(size=6, alpha=0.6, aes(shape = Origin)) +
+  geom_label_repel(aes(label=Label), alpha=0.8, size=4, box.padding = unit(0.3, "lines")) + theme_minimal() + xlab('Dimension 1') + ylab('Dimension 2')
