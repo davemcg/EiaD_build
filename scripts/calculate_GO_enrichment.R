@@ -92,7 +92,7 @@ up_and_down <- bind_rows(ego_up %>%
                              mutate(geneID = gsub('/', '<br>', geneID)) %>%
                              mutate_at(.vars=vars(pvalue,p.adjust,qvalue), .funs=funs(formatC(., format = "e", digits = 2))) %>%
                              mutate(Test = 'Up', Set = comparison),
-                         ego_up %>%
+                         ego_down %>%
                              data.frame() %>%
                              mutate(geneID = gsub('/', '<br>', geneID)) %>%
                              mutate_at(.vars=vars(pvalue,p.adjust,qvalue), .funs=funs(formatC(., format = "e", digits = 2))) %>%
