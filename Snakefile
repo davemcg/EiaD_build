@@ -64,7 +64,6 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 rule all:
     input:
         'results/eyeIntegration_human_expression_2019_v100.sqlite'
-
 '''
 ****PART 1**** download files
 '''
@@ -173,20 +172,10 @@ rule find_tx_low_usage:
 rule remove_tx_low_usage:
     input:'tx_for_removal.txt',ref_fasta
     output: 'ref/gencodeRef_trimmed.fa'
-    run:
-        with open(input[1]) as infasta, open('tx_for_removal') as bad_tx, open(output[0],'w+') as outfasta:
-            names=set()
-            for line in bad_tx:
-                names.add('>'+line.strip())
-            oldline=infasta.readline().strip().split('|')[0]
-            while oldline:
-                if oldline not in names and '>' in oldline:
-                    write=True
-                elif oldline in names and '>' in oldline:
-                    write=False
-                if write:
-                    outfasta.write(oldline+'\n')
-                oldline=infasta.readline().strip().strip().split('|')[0]
+    shell:
+        '''
+        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[0]} 
+        '''
 
 
 '''
@@ -195,16 +184,14 @@ rule remove_tx_low_usage:
 
 rule rebuild_salmon_index:
     input:'ref/gencodeRef_trimmed.fa'
-    params: 'ref/salmonindexTrimmed'
-    output: 'ref/salmonindexTrimmed/sa.bin'
+    output:'ref/salmonindexTrimmed'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} code -i {} --type quasi --perfectHash -k 31'.format(input[0],params[0])
+        salmonindexcommand=loadSalmon + 'salmon index -t {} code -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 rule reQuantify_Salmon:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
-            'ref/salmonindexTrimmed/sa.bin'
-    params: 'ref/salmonindexTrimmed'
+            'ref/salmonindexTrimmed'
     output:'RE_quant_files/{sampleID}/quant.sf'
     log: 'logs/{sampleID}.rq.log'
     run:
@@ -212,9 +199,9 @@ rule reQuantify_Salmon:
         #tissue=wildcards.tissue
         paired=sample_dict[id]['paired']
         if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(params[0],input[0],input[1],'RE_quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
         else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(params[0],input[0],'RE_quant_files/{}'.format(id))
+            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
         sp.run(salmon_command,shell=True)
         log1='logs/{}.rq.log'.format(id)
         salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
@@ -281,7 +268,7 @@ rule differential_expression:
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:
-        #comparisons = 'results/de_comparisons_{level}.txt',
+        comparisons = 'results/de_comparisons_{level}.txt',
         limma_object = 'results/limma_DE_object_{level}.Rdata',
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
     shell:
@@ -346,7 +333,7 @@ rule GO_term_enrichment:
          {threads} \
          {input} \
          {output}
-       ''' 
+       '''
 
 # create SQLite expression db
 rule make_SQLite_db:
