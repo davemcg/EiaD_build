@@ -174,7 +174,7 @@ rule remove_tx_low_usage:
     output: 'ref/gencodeRef_trimmed.fa'
     shell:
         '''
-        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[0]} 
+        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[]}
         '''
 
 
@@ -186,7 +186,7 @@ rule rebuild_salmon_index:
     input:'ref/gencodeRef_trimmed.fa'
     output:'ref/salmonindexTrimmed'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} code -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 rule reQuantify_Salmon:
@@ -246,8 +246,7 @@ rule make_meta_info:
     output:
         metadata = 'results/core_tight.Rdata',
         tx_names = 'results/tx_names.Rdata',
-        gene_names = 'results/gene_names.Rdata',
-        gene_tx_info = 'results/gene_tx_gtf_info.Rdata'
+        gene_names = 'results/gene_names.Rdata'
     shell:
         '''
         module load R
@@ -259,8 +258,7 @@ rule make_meta_info:
           {params.working_dir} \
           {output.metadata} \
           {output.tx_names} \
-          {output.gene_names} \
-          {output.gene_tx_info}
+          {output.gene_names}
         '''
 
 rule differential_expression:
