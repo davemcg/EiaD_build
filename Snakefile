@@ -174,7 +174,7 @@ rule remove_tx_low_usage:
     output: 'ref/gencodeRef_trimmed.fa'
     shell:
         '''
-        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[]}
+        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[]} Gencode 
         '''
 
 
@@ -186,7 +186,7 @@ rule rebuild_salmon_index:
     input:'ref/gencodeRef_trimmed.fa'
     output:'ref/salmonindexTrimmed'
     run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
+        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
 rule reQuantify_Salmon:
