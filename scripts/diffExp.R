@@ -10,8 +10,9 @@ args=commandArgs(trailingOnly = T)
 setwd(args[1])
 sample_table <- read.table(args[2],stringsAsFactors = F, header = F,sep = '\t')
 lstpms_smoothed <- read.csv(args[3], row.names = 1)  #'results/smoothed_filtered_tpms.csv',row.names = 1)
-output_limma_object_file <- args[4]
-output_list_of_df_file <- args[5]
+de_comparison_contrast_names_file <- args[4]
+output_limma_object_file <- args[5]
+output_list_of_df_file <- args[6]
 
 colnames(sample_table) <- c('sample','run','paired','tissue','subtissue','origin')
 sample_table <- filter(sample_table,sample%in%colnames(lstpms_smoothed))
@@ -49,7 +50,7 @@ conts <- combn(unique(subtissue),2) %>%
          cont_name= paste0(tissue_2,' (',type_2,') vs ',tissue_1,' (',type_1,')'))
 de_comparison_contrast_names <- conts$name
 names(de_comparison_contrast_names) <- gsub('\\.', ' ', conts$cont_name)
-save(de_comparison_contrast_names,file='results/de_comparison_name_list.Rdata')
+save(de_comparison_contrast_names,file=de_comparison_contrast_names_file)
 cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.Line-RPE_Stem.Cell.Line",
                                  ESC_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="ESC_Stem.Cell.Line-RPE_Stem.Cell.Line",
                                  Retina_Adult.Tissue_vs_RPE_Stem.Cell.Line="Retina_Adult.Tissue-RPE_Stem.Cell.Line",
