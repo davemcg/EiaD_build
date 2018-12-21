@@ -36,6 +36,9 @@ limma_DE_tx <- bind_rows(.id = 'Comparison', lapply(limma_lists_tx, rownames_to_
 					left_join(., tx_names, by = c("ID" = "ENST")) %>% # add gene name to tx ID here, same as above
 					mutate(ID = value) %>%
 					select(-value)
+# convert mean_rank_decile ID from ENST to ENGS (ENST)
+tx_db <- tx %>% as.tibble() %>% rownames_to_column('ID')
+mrd_tx <- left_join(mrd_tx, tx_db) %>% mutate(ID = value) %>% dplyr::select(-value)
 
 # write tables!
 dbWriteTable(expression_pool, 'lsTPM_gene', long_gene, row.names = FALSE, overwrite = TRUE)
@@ -48,6 +51,11 @@ dbWriteTable(expression_pool, 'limma_DE_gene', limma_DE_gene, row.names = FALSE,
 db_create_index(expression_pool, 'limma_DE_gene', 'Comparison')
 dbWriteTable(expression_pool, 'limma_DE_tx', limma_DE_gene, row.names = FALSE, overwrite = TRUE)
 db_create_index(expression_pool, 'limma_DE_tx', 'Comparison')
+dbWriteTable(expression_pool, 'mean_rank_decile_gene', mrd_gene, row.names = FALSE, overwrite = TRUE)
+db_create_index(expression_pool,'mean_rank_decile_gene', 'ID')
+dbWriteTable(expression_pool, 'mean_rank_decile_tx', mrd_tx, row.names = FALSE, overwrite = TRUE)
+db_create_index(expression_pool,'mean_rank_decile_tx', 'ID')
+
 
 # close pool, disconnect
 poolClose(expression_pool)
