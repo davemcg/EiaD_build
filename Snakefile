@@ -266,13 +266,13 @@ rule differential_expression:
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:
-        comparisons = 'results/de_comparisons_{level}.txt',
+        comparisons = 'results/de_comparison_name_list_{level}.Rdata',
         limma_object = 'results/limma_DE_object_{level}.Rdata',
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output.limma_object} {output.list_of_dataframes}
+        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output} 
         '''
 
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
