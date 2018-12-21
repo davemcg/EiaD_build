@@ -43,7 +43,7 @@ conts <- combn(unique(subtissue),2) %>%
   data.table() %>%
   mutate(name=paste(V2,V1,sep='_vs_'),
          contrast=paste(V2,V1,sep='-'),
-         tissue_2=strsplit(V2,'_')%>%lapply(function(x)x[[1]]), 
+         tissue_2=strsplit(V2,'_')%>%lapply(function(x)x[[1]]),
          tissue_1=strsplit(V1,'_')%>%lapply(function(x)x[[1]]),
          type_2= strsplit(V2,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
          type_1= strsplit(V1,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),

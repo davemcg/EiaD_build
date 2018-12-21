@@ -174,7 +174,7 @@ rule remove_tx_low_usage:
     output: 'ref/gencodeRef_trimmed.fa'
     shell:
         '''
-        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[]}
+        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[0]} Gencode
         '''
 
 
