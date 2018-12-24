@@ -339,8 +339,11 @@ rule make_SQLite_db:
         tpms = expand('results/smoothed_filtered_tpms_{level}.csv', level = ['gene', 'transcript']),
         tx_names = 'results/tx_names.Rdata',
         DE = expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene', 'transcript']),
+        DE_tests = 'results/de_comparison_name_list_gene.Rdata',
         GO = 'results/all_vs_all_GO.Rdata',
-        mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript'])
+        mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript']),
+        metadata = 'results/core_tight.Rdata',
+        gene_info = 'results/gene_tx_gtf_info.Rdata'
     params:
         working_dir = config['working_dir']
     output:
