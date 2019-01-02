@@ -30,7 +30,7 @@ high_var_TPM <- TPM %>% arrange(variance) %>% tail(3000) %>% select(-variance)
 
 # tsne loop
 tsne_list <- list()
-for (i in seq(5, 10, by = 5)){
+for (i in seq(5, 50, by = 5)){
   print(paste("Perplexity", i, "running."))
   dimRed_out <- Rtsne::Rtsne(as.matrix(log2(t(high_var_TPM)+1)),perplexity = i, check_duplicates = FALSE, theta=0.0)
   #dimRed_out <- dimRed(as.matrix(log2(t(high_var_TPM)+1)), n_neighbors = 20, min_dist = 0.001, pca = 50)

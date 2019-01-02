@@ -333,6 +333,25 @@ rule GO_term_enrichment:
          {output}
        '''
 
+# calculate t-SNE coordinates
+rule tSNE:
+    input:
+        metadata = 'results/core_tight.Rdata',
+        tpm = 'results/smoothed_filtered_tpms_gene.csv',
+        gtf = 'results/gene_tx_gtf_info.Rdata'
+    params:
+        working_dir = config['working_dir']
+    output:
+        'results/tSNE_coords.Rdata'
+    shell:
+        '''
+        module load R
+        Rscript {config[scripts_dir]}/calculate_tsne_5_to_50.R \
+          {params.working_dir} \
+          {input} \
+          {output}
+        '''
+
 # create SQLite expression db
 rule make_SQLite_db:
     input:
@@ -343,7 +362,8 @@ rule make_SQLite_db:
         GO = 'results/all_vs_all_GO.Rdata',
         mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript']),
         metadata = 'results/core_tight.Rdata',
-        gene_info = 'results/gene_tx_gtf_info.Rdata'
+        gene_info = 'results/gene_tx_gtf_info.Rdata',
+        tSNE = 'results/tSNE_coords.Rdata'
     params:
         working_dir = config['working_dir']
     output:
