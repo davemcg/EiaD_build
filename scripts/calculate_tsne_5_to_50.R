@@ -3,10 +3,13 @@ library(Rtsne)
 library(dbscan)
 
 args = commandArgs(trailingOnly=TRUE)
-metadata <- args[1]
-tpm <- args[2]
-gtf_info <- args[3]
-output <- args[4]
+working_dir <- args[1]
+metadata <- args[2]
+tpm <- args[3]
+gtf_info <- args[4]
+output <- args[5]
+
+setwd(working_dir)
 
 load(metadata)
 core_tight <- core_tight %>% select(-run_accession) %>% unique()
