@@ -18,7 +18,8 @@ mrd_gene <- read_tsv(args[9]) # mean_rank_decile_gene.tsv
 mrd_tx <- read_tsv(args[10]) # mean_rank_decile_transcript.tsv
 load(args[11]) # core_tight.Rdata
 load(args[12]) # gene_tx_gtf_info.Rdata
-sqlite_file <- args[13] # eyeIntegration_human_expression_2019_v100.sqlite
+load(args[13]) # tSNE_coords.Rdata
+sqlite_file <- args[14] # eyeIntegration_human_expression_2019_v100.sqlite
 
 # create connection to sqlite file
 expression_pool <- dbPool(SQLite(), dbname = sqlite_file)
@@ -72,5 +73,6 @@ db_create_index(expression_pool,'mean_rank_decile_tx', 'ID')
 dbWriteTable(expression_pool, 'metadata', core_tight, row.names = FALSE, overwrite = TRUE)
 dbWriteTable(expression_pool, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
 dbWriteTable(expression_pool, 'gene_IDs', gene_IDs, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(expression_pool, 'tSNE_bulk_RNA', all_tsne_plot_prepped, row.names = FALSE, overwrite = TRUE)
 # close pool, disconnect
 poolClose(expression_pool)
