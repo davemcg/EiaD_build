@@ -1110,7 +1110,7 @@ E-MTAB-4377.RNA7	.	y	Retina	Retina_Adult.Tissue	old
 E-MTAB-4377.RNA8	.	y	Retina	Retina_Adult.Tissue	old
 E-MTAB-4377.RNA9	.	y	Retina	Retina_Adult.Tissue	old
 SRS1706078	SRR4280471	y	RPE	RPE_Cell.Line	old
-SRS1955479	SRR5225761	y	Retina	RPE_Adult.Tissue	old
+SRS1955479	SRR5225761	y	Retina	Retina_Adult.Tissue	old
 SRS1314629	SRR3194179	n	RPE	RPE_Cell.Line	old
 SRS1314627	SRR3194180	n	RPE	RPE_Cell.Line	old
 SRS1314626	SRR3194181	n	RPE	RPE_Cell.Line	old
