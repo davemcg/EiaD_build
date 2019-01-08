@@ -193,6 +193,7 @@ rule reQuantify_Salmon:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
             'ref/salmonindexTrimmed'
     output:'RE_quant_files/{sampleID}/quant.sf'
+    threads: 4
     log: 'logs/{sampleID}.rq.log'
     run:
         id=wildcards.sampleID
@@ -216,6 +217,15 @@ rule reQuantify_Salmon:
             with open(log1,'w+') as logFile:
                 logFile.write('Sample {} failed to align'.format(id))
 
+rule process_poor_mapped_samples:
+    input: expand('logs/{sampleID}.rq.log',sampleID=sample_names)
+    output: 'ref/bad_mapping.txt'
+    shell:
+        '''
+         find logs/ -size  0 -print0 | xargs -0 rm --
+         for i in logs/*; do cat $i && echo  ; done | cut -d' ' -f2 > {output[0]}
+        '''
+
 '''
 ***** Produce files for eyeIntegration web app
 '''
@@ -227,14 +237,17 @@ rule reQuantify_Salmon:
 #	normalize lengthScaled TPM by library size
 #	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
 rule gene_quantification_and_normalization:
-    input: expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),'ref/gencodeAno_bsc.gtf'
+    input:
+        tpms=expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),
+        gtf='ref/gencodeAno_bsc.gtf',
+        bad_map='ref/bad_mapping.txt'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:'results/smoothed_filtered_tpms_{level}.csv'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {output}
+        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {output} {input.bad_map}
         '''
 
 # output sample metadata and gene/tx lists for eyeIntegration
