@@ -55,11 +55,12 @@ gtf <- rtracklayer::readGFF(gtf_file) %>%
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type", "transcript_type")] %>% 
   filter(gene_name%in%gene_qc_tpms$ID)
 
-genes= anno$gene_name %>% unique
-save(genes, file= gene_file)
+gene_names = anno$gene_name %>% unique %>% sort()
+save(gene_names, file= gene_file)
 save(anno, file = gene_tx_info)
 tx_qc_tpms=read_csv(tx_qc_file)
-tx=gtf[,c("gene_name", "transcript_id")] %>%
+geneTX_names=gtf[,c("gene_name", "transcript_id")] %>%
   distinct%>%filter(transcript_id %in% tx_qc_tpms$ID)%>% split(.[,2]) %>%
-  sapply(function(x) paste0(x[,1],' (',x[,2],')'))
-save(tx, file=tx_file)
+  sapply(function(x) paste0(x[,1],' (',x[,2],')')) %>%
+  sort()
+save(geneTX_names, file=tx_file)

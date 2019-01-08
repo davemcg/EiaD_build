@@ -279,14 +279,13 @@ rule differential_expression:
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:
-        comparisons = 'results/de_comparisons_{level}.Rdata',
+        comparisons = 'results/de_comparison_name_list_{level}.Rdata',
         limma_object = 'results/limma_DE_object_{level}.Rdata',
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]}\
-         {input} {output.limma_object} {output.list_of_dataframes} {output.comparisons}
+        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output} 
         '''
 
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
@@ -347,14 +346,37 @@ rule GO_term_enrichment:
          {output}
        '''
 
+# calculate t-SNE coordinates
+rule tSNE:
+    input:
+        metadata = 'results/core_tight.Rdata',
+        tpm = 'results/smoothed_filtered_tpms_gene.csv',
+        gtf = 'results/gene_tx_gtf_info.Rdata'
+    params:
+        working_dir = config['working_dir']
+    output:
+        'results/tSNE_coords.Rdata'
+    shell:
+        '''
+        module load R
+        Rscript {config[scripts_dir]}/calculate_tsne_5_to_50.R \
+          {params.working_dir} \
+          {input} \
+          {output}
+        '''
+
 # create SQLite expression db
 rule make_SQLite_db:
     input:
         tpms = expand('results/smoothed_filtered_tpms_{level}.csv', level = ['gene', 'transcript']),
         tx_names = 'results/tx_names.Rdata',
         DE = expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene', 'transcript']),
+        DE_tests = 'results/de_comparison_name_list_gene.Rdata',
         GO = 'results/all_vs_all_GO.Rdata',
-        mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript'])
+        mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript']),
+        metadata = 'results/core_tight.Rdata',
+        gene_info = 'results/gene_tx_gtf_info.Rdata',
+        tSNE = 'results/tSNE_coords.Rdata'
     params:
         working_dir = config['working_dir']
     output:
