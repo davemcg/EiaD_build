@@ -79,7 +79,7 @@ rule downloadGencode:
         gunzip ref/gencodePA.fa.gz
         '''
 
-rule getFQP:
+rule download_fastq:
     output: temp('fastqParts/{id}.fastq.gz')
     run:
         id=wildcards.id
@@ -90,7 +90,8 @@ rule getFQP:
             with open('logs/{}.fqp'.format(wildcards.id)) as l:
                 l.write('{} did not download'.format(wildcards.id))
 
-rule aggFastqsPE:
+# combine multiple fastq files together
+rule aggregate_fastqs:
     input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
     output:'fastq_files/{sampleID}.fastq.gz'
     run:
@@ -180,6 +181,7 @@ rule remove_tx_low_usage:
 
 '''
 ***PART 4*** requantify salmon
+Remove transcripts with no or very low usage (Sonenson method)
 '''
 
 rule rebuild_salmon_index:
@@ -189,7 +191,7 @@ rule rebuild_salmon_index:
         salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
         sp.run(salmonindexcommand, shell=True)
 
-rule reQuantify_Salmon:
+rule re_run_Salmon:
     input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
             'ref/salmonindexTrimmed'
     output:'RE_quant_files/{sampleID}/quant.sf'
