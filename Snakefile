@@ -262,7 +262,7 @@ rule make_meta_info:
         metadata = 'results/core_tight.Rdata',
         tx_names = 'results/tx_names.Rdata',
         gene_names = 'results/gene_names.Rdata',
-		gene_tx_info = 'results/gene_tx_gtf_info_{level}.Rdata'
+        gene_tx_info = 'results/gene_tx_gtf_info.Rdata'
     shell:
         '''
         module load R
@@ -352,7 +352,7 @@ rule tSNE:
     input:
         metadata = 'results/core_tight.Rdata',
         tpm = 'results/smoothed_filtered_tpms_gene.csv',
-        gtf = 'results/gene_tx_gtf_info_gene.Rdata'
+        gtf = 'results/gene_tx_gtf_info.Rdata'
     params:
         working_dir = config['working_dir']
     output:
@@ -376,7 +376,7 @@ rule make_SQLite_db:
         GO = 'results/all_vs_all_GO.Rdata',
         mrd = expand('results/mean_rank_decile_{level}.tsv', level = ['gene', 'transcript']),
         metadata = 'results/core_tight.Rdata',
-        gene_info = 'results/gene_tx_gtf_info_gene.Rdata',
+        gene_info = 'results/gene_tx_gtf_info.Rdata',
         tSNE = 'results/tSNE_coords.Rdata'
     params:
         working_dir = config['working_dir']
