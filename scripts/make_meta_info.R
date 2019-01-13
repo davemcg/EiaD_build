@@ -7,11 +7,13 @@ gtf_file = args[2]
 sql_file=args[3]
 gene_qc_file=args[4]
 tx_qc_file=args[5]
-setwd(args[6])
-metadata_file <- args[7]
-tx_file <- args[8]
-gene_file <- args[9]
-gene_tx_info <- args[10]
+samples_remove_gene=args[6]
+samples_remove_tx=args[7]
+setwd(args[8])
+metadata_file <- args[9]
+tx_file <- args[10]
+gene_file <- args[11]
+gene_tx_info <- args[12]
 
 sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep = '\t')
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','Tissue','Sub_Tissue','Origin')
@@ -42,12 +44,23 @@ core_tight <- core_tight %>%
          Sub_Tissue = gsub('_', ' - ', Sub_Tissue),
          Origin = gsub('_', ' - ', Origin))
 
-
 gene_qc_tpms=read_csv(gene_qc_file)
 samples_kept=colnames(gene_qc_tpms) %>% 
   data.frame(sample_accession=.,Kept='Kept',stringsAsFactors = F)
 core_tight=left_join(core_tight,samples_kept, by='sample_accession')
 core_tight$Kept[is.na(core_tight$Kept)]='removed'
+# hand annotate retina organoids SRP159246
+sample_accession <- c('SRS3729741','SRS3729740','SRS3729739','SRS3729738','SRS3729737','SRS3729736','SRS3729735','SRS3729734','SRS3729733','SRS3729732','SRS3729731','SRS3729730','SRS3729729','SRS3729728','SRS3729727','SRS3729726','SRS3729725','SRS3729724','SRS3729723','SRS3729722','SRS3729721','SRS3729720','SRS3729719','SRS3729718','SRS3729717','SRS3729716','SRS3729715','SRS3729714','SRS3729713','SRS3729712','SRS3729711')
+sample_attribute <- c('Day_250_3','Day_250_2','Day_250_1','Day_200_3','Day_200_2','Day_200_1','Day_181_3','Day_181_2','Day_181_1','Day_173_3','Day_173_2','Day_173_1','Day_158_2','Day_158_1','Day_128_3','Day_128_2','Day_128_1','Day_111_3','Day_111_2','Day_111_1','Day_69_3','Day_69_2','Day_69_1','Day_35_3','Day_35_2','Day_35_1','Day_20_2','Day_20_1','Day_10_3','Day_10_2','Day_10_1')
+SRP159246 <- cbind(sample_accession, sample_attribute) %>% as_tibble() %>% mutate(study_title = 'Thyroid hormone signaling specifies cone subtypes in human retinal organoids')
+core_tight <- left_join(core_tight, SRP159246, by = "sample_accession") %>% 
+  mutate(study_title = case_when(is.na(study_title.x) ~ study_title.y, 
+                                 TRUE ~ study_title.x),
+         sample_attribute = case_when(is.na(sample_attribute.x) ~ sample_attribute.y,
+                                      TRUE ~ sample_attribute.x)) %>% 
+  select(sample_accession, study_accession, study_title, study_abstract, sample_attribute, 
+         run_accession:Kept, -study_title.x, -study_title.y, 
+         -sample_attribute.x, -sample_attribute.y) 
 save(core_tight,file = metadata_file)
 
 gtf <- rtracklayer::readGFF(gtf_file) %>% 

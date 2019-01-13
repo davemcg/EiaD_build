@@ -245,17 +245,20 @@ rule gene_quantification_and_normalization:
         bad_map='ref/bad_mapping.txt'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
-    output:'results/smoothed_filtered_tpms_{level}.csv'
+    output:
+        tpm = 'results/smoothed_filtered_tpms_{level}.csv',
+        removed_samples = 'results/samples_removed_by_QC_{level}.tsv'
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {output} {input.bad_map}
+        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {output}
         '''
 
 # output sample metadata and gene/tx lists for eyeIntegration
 rule make_meta_info:
     input:
-        expand('results/smoothed_filtered_tpms_{level}.csv',level=['gene','transcript'])
+        expand('results/smoothed_filtered_tpms_{level}.csv',level = ['gene','transcript']),
+        expand('results/samples_removed_by_QC_{level}.tsv', level = ['gene','transcript'])
     params:
         working_dir = config['working_dir']
     output:

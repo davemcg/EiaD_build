@@ -12,8 +12,9 @@ sample_metadata = args[1]
 gtf_file = args[2]
 working_dir = args[3]
 level = args[4] # transcript or gene level quantification
-output_file = args[5]
-bad_map_file=args[6]
+bad_map_file = args[5]
+output_file = args[6]
+qc_remove_output_file = args[7]
 setwd(working_dir)
 
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
@@ -132,4 +133,4 @@ if(sum(tsne_plot$outlier) > 0){
 trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
 trimmed_counts_smoothed <- trimmed_counts_smoothed %>% rownames_to_column('ID')
 write_csv(trimmed_counts_smoothed, path = output_file)
-write_tsv(removal_log, path  = paste0('results/samples_removed_by_QC_',level ,'.tsv'))
+write_tsv(removal_log, path = qc_remove_output_file)
