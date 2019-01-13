@@ -33,8 +33,8 @@ gene_IDs <- gene_tpm %>% dplyr::select(ID) %>% arrange(ID) %>%
               left_join(., anno %>% select(gene_name, gene_type), by = c('ID' = 'gene_name')) %>%
               unique()
 ## change tx ID from ENST to Gene (ENST)
-tx_names <- as.tibble(tx) %>% rowwise() %>% mutate(ENST = gsub("^.*\\(|\\)","", value))
-tx_tpm <- left_join(tx_tpm, tx_names, by = c("ID" = "ENST")) %>% mutate(ENST = ID) %>% mutate(ID = value) %>% select(-value)
+tx_names <- geneTX_names %>% enframe() %>% select(ID = name, value)
+tx_tpm <- left_join(tx_tpm, tx_names, by = c("ID")) %>% mutate(ENST = ID) %>% mutate(ID = value) %>% select(-value)
 long_tx <- tx_tpm %>% select(-ENST) %>% gather(key = 'sample_accession', value='value', -ID)
 ## make tx ID df
 tx_IDs <- tx_tpm %>% 
@@ -45,14 +45,14 @@ limma_DE_gene <- bind_rows(.id = 'Comparison', lapply(limma_lists_gene, rownames
 					rename('ID' = rowname)
 limma_DE_tx <- bind_rows(.id = 'Comparison', lapply(limma_lists_tx, rownames_to_column)) %>% 
 					rename('ID' = rowname) %>% 
-					left_join(., tx_names, by = c("ID" = "ENST")) %>% # add gene name to tx ID here, same as above
+					left_join(., tx_names, by = c("ID")) %>% # add gene name to tx ID here, same as above
 					mutate(ID = value) %>%
 					select(-value)
 ## turn limma comparisons into a DF
 de_tests <- de_comparison_contrast_names %>% as.tibble() %>% rownames_to_column('Name') %>% dplyr::rename(Comparison = value)
 # convert mean_rank_decile ID from ENST to ENGS (ENST)
-tx_db <- tx %>% as.tibble() %>% rownames_to_column('ID')
-mrd_tx <- left_join(mrd_tx, tx_db) %>% mutate(ID = value) %>% dplyr::select(-value)
+tx_db <- geneTX_names %>% enframe() %>% select(ID = name, value)
+mrd_tx <- left_join(mrd_tx, tx_db, by = 'ID') %>% mutate(ID = value) %>% dplyr::select(-value)
 
 # write tables!
 dbWriteTable(expression_pool, 'lsTPM_gene', long_gene, row.names = FALSE, overwrite = TRUE)
