@@ -49,11 +49,15 @@ samples_kept=colnames(gene_qc_tpms) %>%
   data.frame(sample_accession=.,Kept='Kept',stringsAsFactors = F)
 core_tight=left_join(core_tight,samples_kept, by='sample_accession')
 core_tight$Kept[is.na(core_tight$Kept)]='removed'
-# hand annotate retina organoids SRP159246
+# hand annotate retina organoids SRP159246 and swaroop fetal retina SRP119766
 sample_accession <- c('SRS3729741','SRS3729740','SRS3729739','SRS3729738','SRS3729737','SRS3729736','SRS3729735','SRS3729734','SRS3729733','SRS3729732','SRS3729731','SRS3729730','SRS3729729','SRS3729728','SRS3729727','SRS3729726','SRS3729725','SRS3729724','SRS3729723','SRS3729722','SRS3729721','SRS3729720','SRS3729719','SRS3729718','SRS3729717','SRS3729716','SRS3729715','SRS3729714','SRS3729713','SRS3729712','SRS3729711')
 sample_attribute <- c('Day_250_3','Day_250_2','Day_250_1','Day_200_3','Day_200_2','Day_200_1','Day_181_3','Day_181_2','Day_181_1','Day_173_3','Day_173_2','Day_173_1','Day_158_2','Day_158_1','Day_128_3','Day_128_2','Day_128_1','Day_111_3','Day_111_2','Day_111_1','Day_69_3','Day_69_2','Day_69_1','Day_35_3','Day_35_2','Day_35_1','Day_20_2','Day_20_1','Day_10_3','Day_10_2','Day_10_1')
 SRP159246 <- cbind(sample_accession, sample_attribute) %>% as_tibble() %>% mutate(study_title = 'Thyroid hormone signaling specifies cone subtypes in human retinal organoids')
-core_tight <- left_join(core_tight, SRP159246, by = "sample_accession") %>% 
+sample_accession <- c('SRS2582170','SRS2582169','SRS2582168','SRS2582167','SRS2582166','SRS2582165','SRS2582164','SRS2582163','SRS2582162','SRS2582161','SRS2582160','SRS2582159','SRS2582158','SRS2582157','SRS2582156','SRS2582155','SRS2582154','SRS2582153','SRS2582152','SRS2582151','SRS2582171','SRS2582150','SRS2582149','SRS2582148','SRS2582147')
+sample_attribute <- c('D132M','D96M','D73M','D132NC','D96NC','D59C-2','D59C','D132P','D96P','D73P','D59P-2','D59P','D136','D132','D125','D115','D107','D105','D94-2','D94','D80','D67','D57','D53','D52/54')
+SRP119766 <- cbind(sample_accession, sample_attribute) %>% as_tibble() %>% mutate(study_title = 'Molecular anatomy of the developing human retina')
+
+core_tight <- left_join(core_tight, bind_rows(SRP159246,SRP119766), by = "sample_accession") %>% 
   mutate(study_title = case_when(is.na(study_title.x) ~ study_title.y, 
                                  TRUE ~ study_title.x),
          sample_attribute = case_when(is.na(sample_attribute.x) ~ sample_attribute.y,
