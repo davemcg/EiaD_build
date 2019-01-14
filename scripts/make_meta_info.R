@@ -61,6 +61,14 @@ core_tight <- left_join(core_tight, SRP159246, by = "sample_accession") %>%
   select(sample_accession, study_accession, study_title, study_abstract, sample_attribute, 
          run_accession:Kept, -study_title.x, -study_title.y, 
          -sample_attribute.x, -sample_attribute.y) 
+# update Kept field with specific reasons
+# e.g. failed because of poor salmon alignment stats or tsne clustering (likely mislabled tissue/tube swap)
+reasons <- read_tsv(samples_remove_gene)
+core_tight <- left_join(core_tight, reasons, by = c('sample_accession' = 'sample')) %>%
+	mutate(Kept = case_when(!is.na(reason) ~ reason,
+				  TRUE ~ Kept)) %>%
+    select(-reason)
+
 save(core_tight,file = metadata_file)
 
 gtf <- rtracklayer::readGFF(gtf_file) %>% 
