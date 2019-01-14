@@ -24,7 +24,7 @@ setwd(working_dir)
 
 sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep = '\t')
 gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript')
-anno <- gtf[,c("gene_id", "gene_name", "transcript_id")]
+anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type")]
 colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','subtissue','origin')
 removal_log=data.frame()
 
@@ -41,13 +41,10 @@ if (level == 'transcript') {
 } else {
     txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
 }
-#save(txi,file = 'tpms.Rdata')
 tpms <- as.data.frame(txi.lsTPMs$counts)
-#counts <- as.data.frame(txi.counts$counts)
 colnames(tpms)  <-  samplenames
 ## remove samples that failed to meet mapping %
 bad_mapping <- read.table(bad_map_file,stringsAsFactors = F) %>% pull(V1)
-
 if(length(bad_mapping) > 0){
     bm = data.frame(sample=sample_design$sample_accession[sample_design$sample_accession%in%bad_mapping],
                     reason='low salmon mapping rate')
@@ -93,32 +90,40 @@ colnames(lsTPM_librarySize) <- colnames(tpms)
 
 #quantile normalize samples
 sample_design <- sample_design %>% filter(sample_accession  %in% colnames(lsTPM_librarySize))
-qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$subtissue))
+qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$tissue))
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
+tpms_smoothed_filtered <- lstpms_smoothed
 
 #cluster with tSNE, then run clustered data throught
-tpms_smoothed_filtered <- lstpms_smoothed
-print(dim(tpms_smoothed_filtered))
+# use 3000 most variable protein coding genes
+if (level == 'transcript'){
+	TPM <- lstpms_smoothed[anno %>% filter(gene_type == 'protein_coding', transcript_id %in% row.names(lstpms_smoothed)) %>% pull(transcript_id) %>% unique(), ]
+} else {
+	TPM <- lstpms_smoothed[anno %>% filter(gene_type == 'protein_coding', gene_name %in% row.names(lstpms_smoothed)) %>% pull(gene_name) %>% unique(), ]
+}
+variance <- apply(TPM, 1, var, na.rm=TRUE)
+TPM$variance <- variance
+high_var_TPM <- TPM %>% arrange(variance) %>% tail(3000) %>% select(-variance)
+
 set.seed(23235)
-tsne_out <- Rtsne(as.matrix(log2(t(tpms_smoothed_filtered)+1)),perplexity = 40, check_duplicates = FALSE, theta=0.0 )
-tsne_plot <- data.frame(tsne_out$Y,sample_design[sample_design$sample_accession%in%colnames(tpms_smoothed_filtered),])
-# ggplot(tsne_plot,aes(x=X1,y=X2, col=tissue))+
-#   geom_point(size=2)+
-#   theme_minimal()
+tsne_out <- Rtsne(as.matrix(log2(t(high_var_TPM)+1)),perplexity = 50, check_duplicates = FALSE, theta=0.0 )
+tsne_plot <- data.frame(tsne_out$Y)
+tsne_plot$sample_accession <- colnames(high_var_TPM)
+tsne_plot <- tsne_plot %>% left_join(., sample_design %>% filter(sample_accession %in% colnames(tpms_smoothed_filtered)), by = 'sample_accession')
 
 #find outliers based on tsne grouping. calculate the center of each group, and look for points n standard deviations away
 e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
 tsne_plot$outlier <- NA
 for(t in tsne_plot$subtissue){
-    tsne.tissue <- filter(tsne_plot,tissue==t)
-    center <- c(mean(tsne.tissue$X1),mean(tsne.tissue$X2))
-    dist <- apply(tsne.tissue[,1:2],1,function(x) e_Dist(x,center))
+    tsne.subtissue <- filter(tsne_plot,subtissue==t)
+    center <- c(mean(tsne.subtissue$X1),mean(tsne.subtissue$X2))
+    dist <- apply(tsne.subtissue[,1:2],1,function(x) e_Dist(x,center))
     n=4 #number of standard deviations a point is allowed to be from the center
     allowed <- c(mean(dist)-n*sd(dist),mean(dist)+n*sd(dist))
     outliers <- dist<allowed[1] | dist> allowed[2]
-    tsne_plot[tsne_plot$tissue==t,]$outlier <- outliers
+    tsne_plot[tsne_plot$subtissue==t,]$outlier <- outliers
 }
 tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 # ggplot(tsne_plot,aes(x=X1,y=X2,col=tissue, shape=outlier))+
