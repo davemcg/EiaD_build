@@ -49,7 +49,7 @@ limma_DE_tx <- bind_rows(.id = 'Comparison', lapply(limma_lists_tx, rownames_to_
 					mutate(ID = value) %>%
 					select(-value)
 ## turn limma comparisons into a DF
-de_tests <- de_comparison_contrast_names %>% as.tibble() %>% rownames_to_column('Name') %>% dplyr::rename(Comparison = value)
+de_tests <- de_comparison_contrast_names %>% enframe('Name') %>% dplyr::rename(Comparison = value)
 # convert mean_rank_decile ID from ENST to ENGS (ENST)
 tx_db <- geneTX_names %>% enframe() %>% select(ID = name, value)
 mrd_tx <- left_join(mrd_tx, tx_db, by = 'ID') %>% mutate(ID = value) %>% dplyr::select(-value)
@@ -74,5 +74,7 @@ dbWriteTable(expression_pool, 'metadata', core_tight, row.names = FALSE, overwri
 dbWriteTable(expression_pool, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
 dbWriteTable(expression_pool, 'gene_IDs', gene_IDs, row.names = FALSE, overwrite = TRUE)
 dbWriteTable(expression_pool, 'tSNE_bulk_RNA', all_tsne_plot_prepped, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(expression_pool, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% select(DB_Created = value), 
+    row.names = FALSE, overwrite=TRUE)
 # close pool, disconnect
 poolClose(expression_pool)
