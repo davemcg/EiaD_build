@@ -14,9 +14,9 @@ SRS1509096	SRR3677557,SRR3677556	y	RPE	RPE_Cell.Line	old
 SRS1572423	SRR3933199	y	ESC	ESC_Stem.Cell.Line	old
 SRS1572424	SRR3933200	y	ESC	ESC_Stem.Cell.Line	old
 SRS1572425	SRR3933201	y	ESC	ESC_Stem.Cell.Line	old
-SRS1572427	SRR3933203	y	ESC	ESC_Stem.Cell.Line	old
-SRS1572428	SRR3933204	y	ESC	ESC_Stem.Cell.Line	old
-SRS1588794	SRR3957254	n	Retina	Retina_Adult.Tissue	old
+SRS1572427	SRR3933203	y	Retina  Retina_Stem.Cell.Line	old
+SRS1572428	SRR3933204	y	Retina	Retina_Stem.Cell.Line	old
+SRS1588794	SRR3957254	n	Retina  Retina_Adult.Tissue	old
 SRS1588796	SRR3957253	n	Retina	Retina_Adult.Tissue	old
 SRS1597854	SRR3994671	y	Retina	Retina_Adult.Tissue	old
 SRS1597855	SRR3994672	y	Retina	Retina_Adult.Tissue	old
@@ -1054,7 +1054,7 @@ SRS897008	SRR1956816	n	Retina	Retina_Stem.Cell.Line	old
 SRS897014	SRR1956812	n	ESC	ESC_Stem.Cell.Line	old
 SRS897009	SRR1956815	n	Retina	Retina_Stem.Cell.Line	old
 SRS897007	SRR1956818	n	Retina	Retina_Stem.Cell.Line	old
-SRS1572426	SRR3933202	y	ESC	ESC_Stem.Cell.Line	old
+SRS1572426	SRR3933202	y	Retina	Retina_Stem.Cell.Line	old
 SRS1747748	SRR4425267	n	Lens	Lens_Stem.Cell.Line	old
 SRS1747747	SRR4425264	n	Lens	Lens_Stem.Cell.Line	old
 SRS1747723	SRR4425263	n	ESC	ESC_Stem.Cell.Line	old
