@@ -17,4 +17,4 @@ cornea <- core_tight_2019 %>% filter(Tissue == 'Cornea') %>%
   select(sample_accession, tiss) %>% 
   data.frame() 
   
-   write_tsv(left_join(meta, cornea, by = c("X1" = "sample_accession")) %>% mutate(X5 = case_when(is.na(tiss) ~ X5, TRUE ~ tiss)) %>% select(-tiss), path = '~/git/eyeIntegration_data_build/sampleTable_2019-01-25_tissues.tab', col_names = F)
+  write_tsv(left_join(meta, cornea, by = c("X1" = "sample_accession")) %>% mutate(X5 = case_when(is.na(tiss) ~ X5, TRUE ~ tiss)) %>% select(-tiss) %>% unique(), path = '~/git/eyeIntegration_data_build/sampleTable_2019-01-25_tissues.tab', col_names = F)
