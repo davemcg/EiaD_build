@@ -13,7 +13,7 @@ cornea <- core_tight_2019 %>% filter(Tissue == 'Cornea') %>%
   mutate(nSub_Tissue = case_when(state == '' ~ sub,
                                  TRUE ~ paste0(state, ' ', sub))) %>% 
   select(sample_accession, sample_attribute, Tissue, Sub_Tissue, nSub_Tissue) %>% 
-  mutate(tiss = paste0('Tissue_', gsub(' ','.',nSub_Tissue)))  %>% 
+  mutate(tiss = paste0(Tissue, '_', gsub(' ','.',nSub_Tissue)))  %>% 
   select(sample_accession, tiss) %>% 
   data.frame() 
   
