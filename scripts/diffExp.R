@@ -51,114 +51,27 @@ conts <- combn(unique(subtissue),2) %>%
 de_comparison_contrast_names <- conts$name
 names(de_comparison_contrast_names) <- gsub('\\.', ' ', conts$cont_name)
 save(de_comparison_contrast_names,file=de_comparison_contrast_names_file)
-cont.matrix_all <- makeContrasts(RPE_Cell.Line_vs_RPE_Stem.Cell.Line="RPE_Cell.Line-RPE_Stem.Cell.Line",
-                                 ESC_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="ESC_Stem.Cell.Line-RPE_Stem.Cell.Line",
-                                 Retina_Adult.Tissue_vs_RPE_Stem.Cell.Line="Retina_Adult.Tissue-RPE_Stem.Cell.Line",
-                                 RPE_Adult.Tissue_vs_RPE_Stem.Cell.Line="RPE_Adult.Tissue-RPE_Stem.Cell.Line",
-                                 RPE_Fetal.Tissue_vs_RPE_Stem.Cell.Line="RPE_Fetal.Tissue-RPE_Stem.Cell.Line",
-                                 Cornea_Adult.Tissue_vs_RPE_Stem.Cell.Line="Cornea_Adult.Tissue-RPE_Stem.Cell.Line",
-                                 Cornea_Fetal.Tissue_vs_RPE_Stem.Cell.Line="Cornea_Fetal.Tissue-RPE_Stem.Cell.Line",
-                                 Cornea_Cell.Line_vs_RPE_Stem.Cell.Line="Cornea_Cell.Line-RPE_Stem.Cell.Line",
-                                 Retina_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="Retina_Stem.Cell.Line-RPE_Stem.Cell.Line",
-                                 Retina_Fetal.Tissue_vs_RPE_Stem.Cell.Line="Retina_Fetal.Tissue-RPE_Stem.Cell.Line",
-                                 Cornea_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="Cornea_Stem.Cell.Line-RPE_Stem.Cell.Line",
-                                 Lens_Stem.Cell.Line_vs_RPE_Stem.Cell.Line="Lens_Stem.Cell.Line-RPE_Stem.Cell.Line",
-                                 Retina_Organoid_vs_RPE_Stem.Cell.Line="Retina_Organoid-RPE_Stem.Cell.Line",
-                                 Body_vs_RPE_Stem.Cell.Line="Body-RPE_Stem.Cell.Line",
-                                 ESC_Stem.Cell.Line_vs_RPE_Cell.Line="ESC_Stem.Cell.Line-RPE_Cell.Line",
-                                 Retina_Adult.Tissue_vs_RPE_Cell.Line="Retina_Adult.Tissue-RPE_Cell.Line",
-                                 RPE_Adult.Tissue_vs_RPE_Cell.Line="RPE_Adult.Tissue-RPE_Cell.Line",
-                                 RPE_Fetal.Tissue_vs_RPE_Cell.Line="RPE_Fetal.Tissue-RPE_Cell.Line",
-                                 Cornea_Adult.Tissue_vs_RPE_Cell.Line="Cornea_Adult.Tissue-RPE_Cell.Line",
-                                 Cornea_Fetal.Tissue_vs_RPE_Cell.Line="Cornea_Fetal.Tissue-RPE_Cell.Line",
-                                 Cornea_Cell.Line_vs_RPE_Cell.Line="Cornea_Cell.Line-RPE_Cell.Line",
-                                 Retina_Stem.Cell.Line_vs_RPE_Cell.Line="Retina_Stem.Cell.Line-RPE_Cell.Line",
-                                 Retina_Fetal.Tissue_vs_RPE_Cell.Line="Retina_Fetal.Tissue-RPE_Cell.Line",
-                                 Cornea_Stem.Cell.Line_vs_RPE_Cell.Line="Cornea_Stem.Cell.Line-RPE_Cell.Line",
-                                 Lens_Stem.Cell.Line_vs_RPE_Cell.Line="Lens_Stem.Cell.Line-RPE_Cell.Line",
-                                 Retina_Organoid_vs_RPE_Cell.Line="Retina_Organoid-RPE_Cell.Line",
-                                 Body_vs_RPE_Cell.Line="Body-RPE_Cell.Line",
-                                 Retina_Adult.Tissue_vs_ESC_Stem.Cell.Line="Retina_Adult.Tissue-ESC_Stem.Cell.Line",
-                                 RPE_Adult.Tissue_vs_ESC_Stem.Cell.Line="RPE_Adult.Tissue-ESC_Stem.Cell.Line",
-                                 RPE_Fetal.Tissue_vs_ESC_Stem.Cell.Line="RPE_Fetal.Tissue-ESC_Stem.Cell.Line",
-                                 Cornea_Adult.Tissue_vs_ESC_Stem.Cell.Line="Cornea_Adult.Tissue-ESC_Stem.Cell.Line",
-                                 Cornea_Fetal.Tissue_vs_ESC_Stem.Cell.Line="Cornea_Fetal.Tissue-ESC_Stem.Cell.Line",
-                                 Cornea_Cell.Line_vs_ESC_Stem.Cell.Line="Cornea_Cell.Line-ESC_Stem.Cell.Line",
-                                 Retina_Stem.Cell.Line_vs_ESC_Stem.Cell.Line="Retina_Stem.Cell.Line-ESC_Stem.Cell.Line",
-                                 Retina_Fetal.Tissue_vs_ESC_Stem.Cell.Line="Retina_Fetal.Tissue-ESC_Stem.Cell.Line",
-                                 Cornea_Stem.Cell.Line_vs_ESC_Stem.Cell.Line="Cornea_Stem.Cell.Line-ESC_Stem.Cell.Line",
-                                 Lens_Stem.Cell.Line_vs_ESC_Stem.Cell.Line="Lens_Stem.Cell.Line-ESC_Stem.Cell.Line",
-                                 Retina_Organoid_vs_ESC_Stem.Cell.Line="Retina_Organoid-ESC_Stem.Cell.Line",
-                                 Body_vs_ESC_Stem.Cell.Line="Body-ESC_Stem.Cell.Line",
-                                 RPE_Adult.Tissue_vs_Retina_Adult.Tissue="RPE_Adult.Tissue-Retina_Adult.Tissue",
-                                 RPE_Fetal.Tissue_vs_Retina_Adult.Tissue="RPE_Fetal.Tissue-Retina_Adult.Tissue",
-                                 Cornea_Adult.Tissue_vs_Retina_Adult.Tissue="Cornea_Adult.Tissue-Retina_Adult.Tissue",
-                                 Cornea_Fetal.Tissue_vs_Retina_Adult.Tissue="Cornea_Fetal.Tissue-Retina_Adult.Tissue",
-                                 Cornea_Cell.Line_vs_Retina_Adult.Tissue="Cornea_Cell.Line-Retina_Adult.Tissue",
-                                 Retina_Stem.Cell.Line_vs_Retina_Adult.Tissue="Retina_Stem.Cell.Line-Retina_Adult.Tissue",
-                                 Retina_Fetal.Tissue_vs_Retina_Adult.Tissue="Retina_Fetal.Tissue-Retina_Adult.Tissue",
-                                 Cornea_Stem.Cell.Line_vs_Retina_Adult.Tissue="Cornea_Stem.Cell.Line-Retina_Adult.Tissue",
-                                 Lens_Stem.Cell.Line_vs_Retina_Adult.Tissue="Lens_Stem.Cell.Line-Retina_Adult.Tissue",
-                                 Retina_Organoid_vs_Retina_Adult.Tissue="Retina_Organoid-Retina_Adult.Tissue",
-                                 Body_vs_Retina_Adult.Tissue="Body-Retina_Adult.Tissue",
-                                 RPE_Fetal.Tissue_vs_RPE_Adult.Tissue="RPE_Fetal.Tissue-RPE_Adult.Tissue",
-                                 Cornea_Adult.Tissue_vs_RPE_Adult.Tissue="Cornea_Adult.Tissue-RPE_Adult.Tissue",
-                                 Cornea_Fetal.Tissue_vs_RPE_Adult.Tissue="Cornea_Fetal.Tissue-RPE_Adult.Tissue",
-                                 Cornea_Cell.Line_vs_RPE_Adult.Tissue="Cornea_Cell.Line-RPE_Adult.Tissue",
-                                 Retina_Stem.Cell.Line_vs_RPE_Adult.Tissue="Retina_Stem.Cell.Line-RPE_Adult.Tissue",
-                                 Retina_Fetal.Tissue_vs_RPE_Adult.Tissue="Retina_Fetal.Tissue-RPE_Adult.Tissue",
-                                 Cornea_Stem.Cell.Line_vs_RPE_Adult.Tissue="Cornea_Stem.Cell.Line-RPE_Adult.Tissue",
-                                 Lens_Stem.Cell.Line_vs_RPE_Adult.Tissue="Lens_Stem.Cell.Line-RPE_Adult.Tissue",
-                                 Retina_Organoid_vs_RPE_Adult.Tissue="Retina_Organoid-RPE_Adult.Tissue",
-                                 Body_vs_RPE_Adult.Tissue="Body-RPE_Adult.Tissue",
-                                 Cornea_Adult.Tissue_vs_RPE_Fetal.Tissue="Cornea_Adult.Tissue-RPE_Fetal.Tissue",
-                                 Cornea_Fetal.Tissue_vs_RPE_Fetal.Tissue="Cornea_Fetal.Tissue-RPE_Fetal.Tissue",
-                                 Cornea_Cell.Line_vs_RPE_Fetal.Tissue="Cornea_Cell.Line-RPE_Fetal.Tissue",
-                                 Retina_Stem.Cell.Line_vs_RPE_Fetal.Tissue="Retina_Stem.Cell.Line-RPE_Fetal.Tissue",
-                                 Retina_Fetal.Tissue_vs_RPE_Fetal.Tissue="Retina_Fetal.Tissue-RPE_Fetal.Tissue",
-                                 Cornea_Stem.Cell.Line_vs_RPE_Fetal.Tissue="Cornea_Stem.Cell.Line-RPE_Fetal.Tissue",
-                                 Lens_Stem.Cell.Line_vs_RPE_Fetal.Tissue="Lens_Stem.Cell.Line-RPE_Fetal.Tissue",
-                                 Retina_Organoid_vs_RPE_Fetal.Tissue="Retina_Organoid-RPE_Fetal.Tissue",
-                                 Body_vs_RPE_Fetal.Tissue="Body-RPE_Fetal.Tissue",
-                                 Cornea_Fetal.Tissue_vs_Cornea_Adult.Tissue="Cornea_Fetal.Tissue-Cornea_Adult.Tissue",
-                                 Cornea_Cell.Line_vs_Cornea_Adult.Tissue="Cornea_Cell.Line-Cornea_Adult.Tissue",
-                                 Retina_Stem.Cell.Line_vs_Cornea_Adult.Tissue="Retina_Stem.Cell.Line-Cornea_Adult.Tissue",
-                                 Retina_Fetal.Tissue_vs_Cornea_Adult.Tissue="Retina_Fetal.Tissue-Cornea_Adult.Tissue",
-                                 Cornea_Stem.Cell.Line_vs_Cornea_Adult.Tissue="Cornea_Stem.Cell.Line-Cornea_Adult.Tissue",
-                                 Lens_Stem.Cell.Line_vs_Cornea_Adult.Tissue="Lens_Stem.Cell.Line-Cornea_Adult.Tissue",
-                                 Retina_Organoid_vs_Cornea_Adult.Tissue="Retina_Organoid-Cornea_Adult.Tissue",
-                                 Body_vs_Cornea_Adult.Tissue="Body-Cornea_Adult.Tissue",
-                                 Cornea_Cell.Line_vs_Cornea_Fetal.Tissue="Cornea_Cell.Line-Cornea_Fetal.Tissue",
-                                 Retina_Stem.Cell.Line_vs_Cornea_Fetal.Tissue="Retina_Stem.Cell.Line-Cornea_Fetal.Tissue",
-                                 Retina_Fetal.Tissue_vs_Cornea_Fetal.Tissue="Retina_Fetal.Tissue-Cornea_Fetal.Tissue",
-                                 Cornea_Stem.Cell.Line_vs_Cornea_Fetal.Tissue="Cornea_Stem.Cell.Line-Cornea_Fetal.Tissue",
-                                 Lens_Stem.Cell.Line_vs_Cornea_Fetal.Tissue="Lens_Stem.Cell.Line-Cornea_Fetal.Tissue",
-                                 Retina_Organoid_vs_Cornea_Fetal.Tissue="Retina_Organoid-Cornea_Fetal.Tissue",
-                                 Body_vs_Cornea_Fetal.Tissue="Body-Cornea_Fetal.Tissue",
-                                 Retina_Stem.Cell.Line_vs_Cornea_Cell.Line="Retina_Stem.Cell.Line-Cornea_Cell.Line",
-                                 Retina_Fetal.Tissue_vs_Cornea_Cell.Line="Retina_Fetal.Tissue-Cornea_Cell.Line",
-                                 Cornea_Stem.Cell.Line_vs_Cornea_Cell.Line="Cornea_Stem.Cell.Line-Cornea_Cell.Line",
-                                 Lens_Stem.Cell.Line_vs_Cornea_Cell.Line="Lens_Stem.Cell.Line-Cornea_Cell.Line",
-                                 Retina_Organoid_vs_Cornea_Cell.Line="Retina_Organoid-Cornea_Cell.Line",
-                                 Body_vs_Cornea_Cell.Line="Body-Cornea_Cell.Line",
-                                 Retina_Fetal.Tissue_vs_Retina_Stem.Cell.Line="Retina_Fetal.Tissue-Retina_Stem.Cell.Line",
-                                 Cornea_Stem.Cell.Line_vs_Retina_Stem.Cell.Line="Cornea_Stem.Cell.Line-Retina_Stem.Cell.Line",
-                                 Lens_Stem.Cell.Line_vs_Retina_Stem.Cell.Line="Lens_Stem.Cell.Line-Retina_Stem.Cell.Line",
-                                 Retina_Organoid_vs_Retina_Stem.Cell.Line="Retina_Organoid-Retina_Stem.Cell.Line",
-                                 Body_vs_Retina_Stem.Cell.Line="Body-Retina_Stem.Cell.Line",
-                                 Cornea_Stem.Cell.Line_vs_Retina_Fetal.Tissue="Cornea_Stem.Cell.Line-Retina_Fetal.Tissue",
-                                 Lens_Stem.Cell.Line_vs_Retina_Fetal.Tissue="Lens_Stem.Cell.Line-Retina_Fetal.Tissue",
-                                 Retina_Organoid_vs_Retina_Fetal.Tissue="Retina_Organoid-Retina_Fetal.Tissue",
-                                 Body_vs_Retina_Fetal.Tissue="Body-Retina_Fetal.Tissue",
-                                 Lens_Stem.Cell.Line_vs_Cornea_Stem.Cell.Line="Lens_Stem.Cell.Line-Cornea_Stem.Cell.Line",
-                                 Retina_Organoid_vs_Cornea_Stem.Cell.Line="Retina_Organoid-Cornea_Stem.Cell.Line",
-                                 Body_vs_Cornea_Stem.Cell.Line="Body-Cornea_Stem.Cell.Line",
-                                 Retina_Organoid_vs_Lens_Stem.Cell.Line="Retina_Organoid-Lens_Stem.Cell.Line",
-                                 Body_vs_Lens_Stem.Cell.Line="Body-Lens_Stem.Cell.Line",
-                                 Body_vs_Retina_Organoid="Body-Retina_Organoid",
-                                 levels=design_eye_and_gtex)
+# https://support.bioconductor.org/p/9228/
+design.pairs <-
+  function(levels) {
+    n <- length(levels)
+    design <- matrix(0,n,choose(n,2))
+    rownames(design) <- levels
+    colnames(design) <- 1:choose(n,2)
+    k <- 0
+    for (i in 1:(n-1))
+      for (j in (i+1):n) {
+        k <- k+1
+        design[i,k] <- 1
+        design[j,k] <- -1
+        colnames(design)[k] <- paste(levels[i],"-",levels[j],sep="")
+      }
+    design
+  }
+cont.matrix_all <- design.pairs(c(conts$V1,conts$V2) %>% unique())
 
 vfit_all <- lmFit(v_eye_gtex, design_eye_and_gtex)
+cont.matrix_all <- cont.matrix_all[colnames(vfit_all),] # reorder to match vfit_all
 vfit_all <- contrasts.fit(vfit_all, contrasts=cont.matrix_all)
 efit_all <- eBayes(vfit_all)
 
@@ -167,6 +80,7 @@ limma_de_data = list()
 for (i in colnames(efit_all)){
   limma_de_data[[i]] <- topTable(efit_all, coef=i, adjust.method = 'fdr', number=300000)
 }
+names(limma_de_data) <- gsub('-','_vs_', names(limma_de_data))
 
 save(efit_all, file = output_limma_object_file)
 save(limma_de_data, file = output_list_of_df_file)
