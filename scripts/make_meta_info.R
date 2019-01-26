@@ -65,6 +65,15 @@ core_tight <- left_join(core_tight, bind_rows(SRP159246,SRP119766), by = "sample
   select(sample_accession, study_accession, study_title, study_abstract, sample_attribute, 
          run_accession:Kept, -study_title.x, -study_title.y, 
          -sample_attribute.x, -sample_attribute.y) 
+
+# rewrite Origin from Sub_Tissue
+core_tight <- core_tight %>% mutate(Origin = case_when( grepl('Transformed', Sub_Tissue, ignore.case = T) ~ 'Cell Line',
+                                               grepl('Fetal', Sub_Tissue) ~ 'Fetal Tissue',
+                                               grepl('Stem', Sub_Tissue) ~ 'Stem Cell',
+                                               grepl('Organoid', Sub_Tissue) ~ 'Organoid',
+                                               grepl('Cell Line', Sub_Tissue) ~ 'Cell Line',
+                                               TRUE ~ 'Adult Tissue')) 
+
 # update Kept field with specific reasons
 # e.g. failed because of poor salmon alignment stats or tsne clustering (likely mislabled tissue/tube swap)
 reasons <- read_tsv(samples_remove_gene)
