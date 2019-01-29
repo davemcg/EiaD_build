@@ -126,8 +126,8 @@ rule aggregate_fastqs:
 # after the first salmon run all transcripts across all samples
 # will be evaluated and those transcripts with extremely low
 # counts will be removed and the salmon index is rebuilt,
-# and salmon is run again on the new index 
-if config['build_new_salmon_index'].upper() == 'YES': 
+# and salmon is run again on the new index
+if config['build_new_salmon_index'].upper() == 'YES':
     '''
     ****PART 2*** Initial quantification
     '''
@@ -238,7 +238,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
 # which we imagine will be the latest trimmed salmon index from rebuild_salmon_index
 # and/or the salmon_quant files downloaded from eyeIntegration
 # the idea is not to do the fairly computationally expensive step of building salmon
-# indices twice and running salmon twice, as adding a few new samples is not 
+# indices twice and running salmon twice, as adding a few new samples is not
 # going to alter to the salon index much
 else:
     rule re_run_Salmon:
@@ -277,8 +277,7 @@ rule process_poor_mapped_samples:
     output: 'ref/bad_mapping.txt'
     shell:
         '''
-         find logs/ -size  0 -print0 | xargs -0 rm --
-         for i in logs/*; do cat $i && echo  ; done | cut -d' ' -f2 > {output[0]}
+        for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
         '''
 
 '''
@@ -342,7 +341,7 @@ rule differential_expression:
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output} 
+        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output}
         '''
 
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
