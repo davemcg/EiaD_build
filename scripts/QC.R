@@ -44,7 +44,7 @@ if (level == 'transcript') {
 tpms <- as.data.frame(txi.lsTPMs$counts)
 colnames(tpms)  <-  samplenames
 ## remove samples that failed to meet mapping %
-bad_mapping <- read.table(bad_map_file,stringsAsFactors = F) %>% pull(V1)
+bad_mapping <- read.table(bad_map_file,stringsAsFactors = F) %>% pull(V2)
 if(length(bad_mapping) > 0){
     bm = data.frame(sample=sample_design$sample_accession[sample_design$sample_accession%in%bad_mapping],
                     reason='low salmon mapping rate')
