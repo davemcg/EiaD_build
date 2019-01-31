@@ -56,7 +56,7 @@
 	},
 	"GO_term_enrichment" :
 	{
-		"mem" : "64g"
+		"mem" : "128g"
 	},
 	"make_SQLite_db" :
 	{

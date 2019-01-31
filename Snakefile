@@ -389,7 +389,7 @@ rule GO_term_enrichment:
         limma_object = 'results/limma_DE_object_gene.Rdata'
     params:
         working_dir = config['working_dir']
-    threads: 10
+    threads: 20
     output:
         all_vs_all_go = 'results/all_vs_all_GO.Rdata'
     shell:
