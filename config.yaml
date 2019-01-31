@@ -1,5 +1,5 @@
 refFasta_url: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_29/gencode.v29.transcripts.fa.gz'
-sampleFile: '/home/mcgaugheyd/git/autoRNAseq/sampleTable_2019-01-28_ogvfb_RPE.tab'
+sampleFile: '/home/mcgaugheyd/git/autoRNAseq/sampleTable_2019-01-25_tissues.tab'
 salmon_version: 'salmon/0.11.0'
 R_version: 'R/3.5.0'
 samtools_version: 'samtools/1.9'
