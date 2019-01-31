@@ -22,18 +22,19 @@ sra_query <- "SELECT * FROM sra WHERE sample_accession='BLANK'"
 eye_tissue <- c('Retina','RPE','Cornea','ESC')
 core_tight <- lapply(sample_design$sample_accession,function(x) dbGetQuery(sra_con, gsub('BLANK',x,sra_query)))%>%do.call(rbind,.) %>%
   distinct%>%select(study_accession, study_title, study_abstract, sample_accession, run_accession, sample_attribute) %>%
-  left_join(sample_design[,c(1,4,5)],by='sample_accession')
+  right_join(sample_design[,c(1,4,5)],by='sample_accession')
 core_tight$Origin <-  strsplit(core_tight[,'Sub_Tissue'],'_') %>% 
   sapply(function(x) ifelse(x[[1]] %in% eye_tissue, x[[2]], 'Tissue'))
 # add EMTAB
-core_tight <- bind_rows(core_tight, 
-                        sample_design %>% 
-                          filter(grepl('MTAB', sample_accession)) %>% 
-                          select(sample_accession, run_accession, Tissue, Sub_Tissue) %>% 
-                          mutate(Origin = 'Adult Tissue',
-                                 study_title = 'RNAseq 50 Normal Human Retina',
-                                 study_accession = 'E-MTAB-4377',
-                                 study_abstract = 'RNA-seq of post-mort retina donor without clinically relevant visual impairment. Ploy-A enriched. 75-nt paired-end. Short time lapse between tissue sampling and cDNA generation.'))
+core_tight <- core_tight %>% mutate(Origin = case_when(grepl('MTAB', sample_accession) ~ 'Adult Tissue',
+													   TRUE ~ Origin),
+                                    study_title = case_when(grepl('MTAB', sample_accession) ~ 'RNAseq 50 Normal Human Retina',
+                                                            TRUE ~ study_title),
+                                    study_accession = case_when(grepl('MTAB', sample_accession) ~ 'E-MTAB-4377',
+									                            TRUE ~ study_accession),
+	                                study_abstract = case_when(grepl('MTAB', sample_accession) ~ 'RNA-seq of post-mort retina donor without clinically relevant visual impairment. Ploy-A enriched. 75-nt paired-end. Short time lapse between tissue sampling and cDNA generation.',
+                                                               TRUE ~ study_abstract))
+
 core_tight <- core_tight %>% 
   as.tibble() %>% 
   rowwise() %>% 
