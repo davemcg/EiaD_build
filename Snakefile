@@ -79,16 +79,21 @@ rule downloadGencode:
         gunzip ref/gencodePA.fa.gz
         '''
 
-rule download_fastq:
-    output: temp('fastqParts/{id}.fastq.gz')
-    run:
-        id=wildcards.id
-        id=id[:-2] if '_'in id else id #idididid
-        try:
-            sp.check_output(loadSRAtk + 'fastq-dump --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
-        except sp.CalledProcessError:
-            with open('logs/{}.fqp'.format(wildcards.id)) as l:
-                l.write('{} did not download'.format(wildcards.id))
+# set to 'NO' in config.yaml if you have fastq files
+# you've added that aren't from SRA or you don't want
+# to re-download them from SRA
+# deposit fastq files in fastqParts/
+if config['download_fastq'].upper() == 'YES':
+    rule download_fastq:
+        output: temp('fastqParts/{id}.fastq.gz')
+        run:
+            id=wildcards.id
+            id=id[:-2] if '_'in id else id #idididid
+            try:
+                sp.check_output(loadSRAtk + 'fastq-dump --gzip --split-3 -O fastqParts {}'.format(id),shell=True)
+            except sp.CalledProcessError:
+                with open('logs/{}.fqp'.format(wildcards.id)) as l:
+                    l.write('{} did not download'.format(wildcards.id))
 
 # combine multiple fastq files together
 rule aggregate_fastqs:
@@ -117,115 +122,162 @@ rule aggregate_fastqs:
                 else:
                     sp.run('cat {fqp} >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
 
-'''
-****PART 2*** Initial quantification
-'''
-rule build_salmon_index:
-    input:  ref_fasta
-    output:'ref/salmonindex'
-    run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
-        sp.run(salmonindexcommand, shell=True)
+# if set to yes in config.yaml, then salmon will be run twice
+# after the first salmon run all transcripts across all samples
+# will be evaluated and those transcripts with extremely low
+# counts will be removed and the salmon index is rebuilt,
+# and salmon is run again on the new index
+if config['build_new_salmon_index'].upper() == 'YES':
+    '''
+    ****PART 2*** Initial quantification
+    '''
+    rule build_salmon_index:
+        input:  ref_fasta
+        output:'ref/salmonindex'
+        run:
+            salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
+            sp.run(salmonindexcommand, shell=True)
 
 
 
-rule run_salmon:
-    input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
-        'ref/salmonindex'
-    output: 'quant_files/{sampleID}/quant.sf'
-    log: 'logs/{sampleID}.log'
-    run:
-        id=wildcards.sampleID
-        #tissue=wildcards.tissue
-        paired=sample_dict[id]['paired']
-        if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4  -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'quant_files/{}'.format(id))
-        else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4 -r {} -o {}'.format(input[1],input[0],'quant_files/{}'.format(id))
-        sp.run(salmon_command,shell=True)
-        log1='logs/{}.log'.format(id)
-        salmon_info='quant_files/{}/aux_info/meta_info.json'.format(id)
-        if os.path.exists(salmon_info):
-            with open(salmon_info) as file:
-                salmonLog=json.load(file)
-                mappingscore=salmonLog["percent_mapped"]
-            if mappingscore <= 50:
+    rule run_salmon:
+        input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
+            'ref/salmonindex'
+        output: 'quant_files/{sampleID}/quant.sf'
+        log: 'logs/{sampleID}.log'
+        run:
+            id=wildcards.sampleID
+            #tissue=wildcards.tissue
+            paired=sample_dict[id]['paired']
+            if paired:
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4  -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'quant_files/{}'.format(id))
+            else:
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4 -r {} -o {}'.format(input[1],input[0],'quant_files/{}'.format(id))
+            sp.run(salmon_command,shell=True)
+            log1='logs/{}.log'.format(id)
+            salmon_info='quant_files/{}/aux_info/meta_info.json'.format(id)
+            if os.path.exists(salmon_info):
+                with open(salmon_info) as file:
+                    salmonLog=json.load(file)
+                    mappingscore=salmonLog["percent_mapped"]
+                if mappingscore <= 50:
+                    with open(log1,'w+') as logFile:
+                        logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
+            else:
                 with open(log1,'w+') as logFile:
-                    logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
-        else:
-            with open(log1,'w+') as logFile:
-                logFile.write('Sample {} failed to align'.format(id))
+                    logFile.write('Sample {} failed to align'.format(id))
 
-'''
-****PART 3**** find and remove lowly used transcripts
-'''
-#problem with tximport; going to have to make a custom tsxdb from all the gtfs
+    '''
+    ****PART 3**** find and remove lowly used transcripts
+    '''
+    #problem with tximport; going to have to make a custom tsxdb from all the gtfs
 
-rule find_tx_low_usage:
-    input: expand('quant_files/{sampleID}/quant.sf', sampleID=sample_names), 'ref/gencodeAno_bsc.gtf'
-    output:'tx_for_removal.txt'
-    shell:
-        '''
-        module load R
-        Rscript {config[scripts_dir]}/soneson_low_usage.R {ref_GTF_basic}
-        '''
+    rule find_tx_low_usage:
+        input: expand('quant_files/{sampleID}/quant.sf', sampleID=sample_names), 'ref/gencodeAno_bsc.gtf'
+        output:'tx_for_removal.txt'
+        shell:
+            '''
+            module load R
+            Rscript {config[scripts_dir]}/soneson_low_usage.R {ref_GTF_basic}
+            '''
 
-rule remove_tx_low_usage:
-    input:'tx_for_removal.txt',ref_fasta
-    output: 'ref/gencodeRef_trimmed.fa'
-    shell:
-        '''
-        python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[0]} Gencode
-        '''
+    rule remove_tx_low_usage:
+        input:'tx_for_removal.txt',ref_fasta
+        output: 'ref/gencodeRef_trimmed.fa'
+        shell:
+            '''
+            python3 {config[scripts_dir]}/filterFasta.py {input[1]} {input[0]} {output[0]} Gencode
+            '''
 
 
-'''
-***PART 4*** requantify salmon
-Remove transcripts with no or very low usage (Sonenson method)
-'''
+    '''
+    ***PART 4*** requantify salmon
+    Remove transcripts with no or very low usage (Sonenson method)
+    '''
 
-rule rebuild_salmon_index:
-    input:'ref/gencodeRef_trimmed.fa'
-    output:'ref/salmonindexTrimmed'
-    run:
-        salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
-        sp.run(salmonindexcommand, shell=True)
+    rule rebuild_salmon_index:
+        input:'ref/gencodeRef_trimmed.fa'
+        output:'ref/salmonindexTrimmed'
+        run:
+            salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
+            sp.run(salmonindexcommand, shell=True)
 
-rule re_run_Salmon:
-    input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
+
+    rule re_run_Salmon:
+        input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
             'ref/salmonindexTrimmed'
-    output:'RE_quant_files/{sampleID}/quant.sf'
-    threads: 4
-    log: 'logs/{sampleID}.rq.log'
-    run:
-        id=wildcards.sampleID
-        #tissue=wildcards.tissue
-        paired=sample_dict[id]['paired']
-        if paired:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
-        else:
-            salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
-        sp.run(salmon_command,shell=True)
-        log1='logs/{}.rq.log'.format(id)
-        salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
-        if os.path.exists(salmon_info):
-            with open(salmon_info) as file:
-                salmonLog=json.load(file)
-                mappingscore=salmonLog["percent_mapped"]
-            if mappingscore <= 50:
+        output:'RE_quant_files/{sampleID}/quant.sf'
+        threads: 4
+        log: 'logs/{sampleID}.rq.log'
+        run:
+            id=wildcards.sampleID
+            #tissue=wildcards.tissue
+            paired=sample_dict[id]['paired']
+            if paired:
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
+            else:
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
+            sp.run(salmon_command,shell=True)
+            log1='logs/{}.rq.log'.format(id)
+            salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
+            if os.path.exists(salmon_info):
+                with open(salmon_info) as file:
+                    salmonLog=json.load(file)
+                    mappingscore=salmonLog["percent_mapped"]
+                if mappingscore <= 50:
+                    with open(log1,'w+') as logFile:
+                        logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
+                else:
+                    with open(log1,'w+') as logFile:
+                        logFile.write('Sample {} passed mapping QC')
+            else:
                 with open(log1,'w+') as logFile:
-                    logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
-        else:
-            with open(log1,'w+') as logFile:
-                logFile.write('Sample {} failed to align'.format(id))
+                    logFile.write('Sample {} failed to align'.format(id))
+
+# if set to no, then all samples will be run on the user given salmon index path
+# which we imagine will be the latest trimmed salmon index from rebuild_salmon_index
+# and/or the salmon_quant files downloaded from eyeIntegration
+# the idea is not to do the fairly computationally expensive step of building salmon
+# indices twice and running salmon twice, as adding a few new samples is not
+# going to alter to the salon index much
+else:
+    rule re_run_Salmon:
+        input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
+            config['salmon_index_path']
+        output:'RE_quant_files/{sampleID}/quant.sf'
+        threads: 4
+        log: 'logs/{sampleID}.rq.log'
+        run:
+            id=wildcards.sampleID
+            #tissue=wildcards.tissue
+            paired=sample_dict[id]['paired']
+            if paired:
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
+            else:
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
+            sp.run(salmon_command,shell=True)
+            log1='logs/{}.rq.log'.format(id)
+            salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
+            if os.path.exists(salmon_info):
+                with open(salmon_info) as file:
+                    salmonLog=json.load(file)
+                    mappingscore=salmonLog["percent_mapped"]
+                if mappingscore <= 50:
+                    with open(log1,'w+') as logFile:
+                        logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
+                else:
+                    with open(log1,'w+') as logFile:
+                        logFile.write('Sample {} passed mapping QC')
+            else:
+                with open(log1,'w+') as logFile:
+                    logFile.write('Sample {} failed to align'.format(id))
 
 rule process_poor_mapped_samples:
     input: expand('logs/{sampleID}.rq.log',sampleID=sample_names)
     output: 'ref/bad_mapping.txt'
     shell:
         '''
-         find logs/ -size  0 -print0 | xargs -0 rm --
-         for i in logs/*; do cat $i && echo  ; done | cut -d' ' -f2 > {output[0]}
+        for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
         '''
 
 '''
@@ -289,7 +341,7 @@ rule differential_expression:
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output} 
+        Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output}
         '''
 
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
@@ -337,7 +389,7 @@ rule GO_term_enrichment:
         limma_object = 'results/limma_DE_object_gene.Rdata'
     params:
         working_dir = config['working_dir']
-    threads: 10
+    threads: 20
     output:
         all_vs_all_go = 'results/all_vs_all_GO.Rdata'
     shell:

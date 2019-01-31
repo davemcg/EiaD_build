@@ -50,6 +50,7 @@ down_gene_lists <- contrast_DOWNgene_lists(efit_all, 2)
 background_genes_all_by_all <- topTable(efit_all, number=300000) %>% rownames_to_column('Gene') %>% dplyr::select(Gene)
 
 go_maker <- function(comparison){
+	cat(comparison)
     suppressPackageStartupMessages({
         library(clusterProfiler)
         library(org.Hs.eg.db)
@@ -103,7 +104,7 @@ up_and_down
 
 comparisons <- efit_all$contrasts %>% colnames()
 all_vs_all_go <- foreach(i=1:length(comparisons), .combine = rbind) %dopar% {
-	go_run <- go_maker(comparisons[i])
+	go_run <- tryCatch(go_maker(comparisons[i]), error = function(e) data.frame("ONTOLOGY" = NA, "ID" = NA, "Description" = NA, "GeneRatio" = NA, "BgRatio" = NA, "pvalue" = NA, "p.adjust" = NA, "qvalue = NA", "geneID" = NA, "Count" = NA, "Test" = NA, Set = i))
 }
 
 save(all_vs_all_go, file = output)

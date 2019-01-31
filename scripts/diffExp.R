@@ -15,7 +15,7 @@ output_limma_object_file <- args[5]
 output_list_of_df_file <- args[6]
 
 colnames(sample_table) <- c('sample','run','paired','tissue','subtissue','origin')
-sample_table <- filter(sample_table,sample%in%colnames(lstpms_smoothed))
+sample_table <- filter(sample_table, sample %in% colnames(lstpms_smoothed))
 eye_samples <- filter(sample_table,tissue%in%c('Retina','RPE','Cornea','ESC','Lens'))
 body_samples <- filter(sample_table,!tissue%in%c('Retina','RPE','Cornea','ESC', 'Lens', 'RetinalEpithelium'))
 set.seed(123421)
@@ -25,7 +25,7 @@ gtex_sample <- sample_n(body_samples,176)
 # load('ref/david_gtex_subsamples.RData')# l> gtex_sub_samples
 # gtex_sample <- filter(sample_table,sample%in%gtex_sub_samples)
 gtex_sample$tissue <- gtex_sample$subtissue <-  'Body'
-deg_sample_table <- rbind(eye_samples,gtex_sample)
+deg_sample_table <- rbind(eye_samples,gtex_sample,body_samples %>% mutate(subtissue = tissue))
 deg_counts <- lstpms_smoothed[,deg_sample_table$sample]
 subtissue <- deg_sample_table$subtissue%>%as.factor()
 design_eye_and_gtex <- model.matrix(~0 + subtissue )
@@ -43,10 +43,10 @@ conts <- combn(unique(subtissue),2) %>%
   data.table() %>%
   mutate(name=paste(V2,V1,sep='_vs_'),
          contrast=paste(V2,V1,sep='-'),
-         tissue_2=strsplit(V2,'_')%>%lapply(function(x)x[[1]]),
-         tissue_1=strsplit(V1,'_')%>%lapply(function(x)x[[1]]),
-         type_2= strsplit(V2,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
-         type_1= strsplit(V1,'_')%>%lapply(function(x) ifelse(x[[1]]=='Body','Adult',x[[2]])),
+         tissue_2=strsplit(V2,'_|-')%>%lapply(function(x)x[[1]]),
+         tissue_1=strsplit(V1,'_|-')%>%lapply(function(x)x[[1]]),
+         type_2= strsplit(V2,'_|-')%>%lapply(function(x) ifelse(x[[1]] %in% grep("_|-",subtissue, value=T, invert = T) %>% unique(),'Adult',x[[2]])),
+         type_1= strsplit(V1,'_|-')%>%lapply(function(x) ifelse(x[[1]] %in% grep("_|-",subtissue, value=T, invert = T) %>% unique(),'Adult',x[[2]])),
          cont_name= paste0(tissue_2,' (',type_2,') vs ',tissue_1,' (',type_1,')'))
 de_comparison_contrast_names <- conts$name
 names(de_comparison_contrast_names) <- gsub('\\.', ' ', conts$cont_name)
