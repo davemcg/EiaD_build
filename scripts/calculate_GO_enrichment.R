@@ -104,7 +104,7 @@ up_and_down
 
 comparisons <- efit_all$contrasts %>% colnames()
 all_vs_all_go <- foreach(i=1:length(comparisons), .combine = rbind) %dopar% {
-	go_run <- tryCatch(go_maker(comparisons[i]), error = function(e) data.frame("ONTOLOGY" = NA, "ID" = NA, "Description" = NA, "GeneRatio" = NA, "BgRatio" = NA, "pvalue" = NA, "p.adjust" = NA, "qvalue = NA", "geneID" = NA, "Count" = NA, "Test" = NA, Set = i))
+	go_run <- tryCatch(go_maker(comparisons[i]), error = function(e) data.frame("ONTOLOGY" = NA, "ID" = NA, "Description" = NA, "GeneRatio" = NA, "BgRatio" = NA, "pvalue" = NA, "p.adjust" = NA, "qvalue" = NA, "geneID" = NA, "Count" = NA, "Test" = NA, Set = comparisons[i]))
 }
 
 save(all_vs_all_go, file = output)
