@@ -56,7 +56,9 @@
 	},
 	"GO_term_enrichment" :
 	{
-		"mem" : "128g"
+		"partition" : "norm",
+		"time" : "12:00:00",
+		"mem" : "200g"
 	},
 	"make_SQLite_db" :
 	{
@@ -65,5 +67,9 @@
 	"tSNE" :
 	{
 		"mem" : "32g"
+	},
+	"differential_expression" :
+	{
+		"mem" : "16g"
 	}
 }
