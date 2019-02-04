@@ -64,7 +64,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 rule all:
     input:
         'results/word_clouds',
-        'results/eyeIntegration_human_expression_2019_v100.sqlite'
+        config['EiaD_sqlite_file']
 '''
 ****PART 1**** download files
 '''
@@ -454,7 +454,7 @@ rule make_SQLite_db:
     params:
         working_dir = config['working_dir']
     output:
-        'results/eyeIntegration_human_expression_2019_v100.sqlite'
+        config['EiaD_sqlite_file']
     shell:
        '''
        module load R
