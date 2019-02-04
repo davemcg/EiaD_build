@@ -60,14 +60,14 @@ for (i in seq(5, 50, by = 5)){
   
   # cluster stats
   cluster_stats <- dimRed_plot %>% left_join(.,core_tight)  %>%
-    mutate(Origin=factor(Origin, levels=c('Adult Tissue', 'Fetal Tissue', 'Stem Cell Line', 'Cell Line', 'Organoid'))) %>%
+    mutate(Origin=factor(Origin, levels=c('Adult Tissue', 'Fetal Tissue', 'Stem Cell', 'Cell Line', 'Organoid'))) %>%
     mutate(Cluster = as.factor(Cluster)) %>%
     group_by(Cluster) %>%
     summarise(Cluster_Tissues = paste(unique(Tissue), collapse=', '), Cluster_Counts = paste(n(), ' samples', sep=''))
   
   # set up for ggplot
   dimRed_plot_prep <- dimRed_plot %>% left_join(.,core_tight)  %>%
-    mutate(Origin=factor(Origin, levels=c('Adult Tissue', 'Fetal Tissue', 'Stem Cell Line', 'Cell Line', 'Organoid'))) %>%
+    mutate(Origin=factor(Origin, levels=c('Adult Tissue', 'Fetal Tissue', 'Stem Cell', 'Cell Line', 'Organoid'))) %>%
     mutate(Cluster = as.factor(Cluster)) %>%
     left_join(., cluster_stats, by=c('Cluster')) %>%
     mutate(Label = paste(Cluster, Cluster_Tissues,sep=': ')) %>%
