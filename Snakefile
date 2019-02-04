@@ -63,7 +63,8 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
-        'results/eyeIntegration_human_expression_2019_v100.sqlite'
+        'results/word_clouds',
+        config['EiaD_sqlite_file']
 '''
 ****PART 1**** download files
 '''
@@ -420,6 +421,23 @@ rule tSNE:
           {input} \
           {output}
         '''
+# make word cloud png for GO enrichment 
+rule make_word_clouds:
+    input:
+        'results/all_vs_all_GO.Rdata'
+    output:
+        'results/word_clouds'
+    params:
+        working_dir = config['working_dir']
+    shell:
+        """
+        module load {config[R_version]}
+        mkdir -p {output}
+        Rscript {config[scripts_dir]}/make_word_cloud_pngs.R \
+          {params.working_dir} \
+          {input} \
+          {output}
+        """
 
 # create SQLite expression db
 rule make_SQLite_db:
@@ -436,7 +454,7 @@ rule make_SQLite_db:
     params:
         working_dir = config['working_dir']
     output:
-        'results/eyeIntegration_human_expression_2019_v100.sqlite'
+        config['EiaD_sqlite_file']
     shell:
        '''
        module load R

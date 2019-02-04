@@ -1,8 +1,9 @@
 # generate word cloud files for all vs all diff exp for web app
 args = commandArgs(trailingOnly=TRUE)
 
-load(args[1]) # results/all_vs_all_GO.Rdata
-output_folder = args[2]
+setwd(args[1])
+load(args[2]) # results/all_vs_all_GO.Rdata
+output_folder = args[3] 
 library(tm)
 library(SnowballC)
 library(wordcloud)
@@ -37,6 +38,7 @@ all_BP_go <- background_go_words(all_vs_all_go, 'BP')
 all_MF_go <- background_go_words(all_vs_all_go, 'MF')
 #Word cloud function
 cloud_maker <- function(word_vector, exclusion_words, max.words, all_go, title){
+  tryCatch({
   docs <- Corpus(VectorSource(word_vector))
   docs <- tm_map(docs, content_transformer(tolower))
   docs <- tm_map(docs, removeNumbers)
@@ -65,6 +67,7 @@ cloud_maker <- function(word_vector, exclusion_words, max.words, all_go, title){
   calculated$word %>% data.frame()
   
   dev.off()
+  }, error = function(e) cat("pass"))
 }
 
 

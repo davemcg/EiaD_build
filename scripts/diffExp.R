@@ -41,14 +41,16 @@ vfit_eye_gtex <- lmFit(v_eye_gtex, design_eye_and_gtex)
 conts <- combn(unique(subtissue),2) %>%
   t() %>%
   data.table() %>%
-  mutate(name=paste(V2,V1,sep='_vs_'),
-         contrast=paste(V2,V1,sep='-'),
+  mutate(name=paste(V1,V2,sep='_vs_'),
+         contrast=paste(V1,V2,sep='-'),
          tissue_2=strsplit(V2,'_|-')%>%lapply(function(x)x[[1]]),
          tissue_1=strsplit(V1,'_|-')%>%lapply(function(x)x[[1]]),
          type_2= strsplit(V2,'_|-')%>%lapply(function(x) ifelse(x[[1]] %in% grep("_|-",subtissue, value=T, invert = T) %>% unique(),'Adult',x[[2]])),
          type_1= strsplit(V1,'_|-')%>%lapply(function(x) ifelse(x[[1]] %in% grep("_|-",subtissue, value=T, invert = T) %>% unique(),'Adult',x[[2]])),
-         cont_name= paste0(tissue_2,' (',type_2,') vs ',tissue_1,' (',type_1,')'))
-de_comparison_contrast_names <- conts$name
+         cont_name= paste0(tissue_1,' (',type_1,') vs ',tissue_2,' (',type_2,')')) %>%
+  filter(grepl('RPE|Cornea|Retin|Lens|ESC|RetinalEpithelium', ignore.case=T, contrast))  # remove all notEye-notEye comparisons
+
+de_comparison_contrast_names <- conts$contrast
 names(de_comparison_contrast_names) <- gsub('\\.', ' ', conts$cont_name)
 save(de_comparison_contrast_names,file=de_comparison_contrast_names_file)
 # https://support.bioconductor.org/p/9228/
@@ -69,9 +71,11 @@ design.pairs <-
     design
   }
 cont.matrix_all <- design.pairs(c(conts$V1,conts$V2) %>% unique())
+cont.matrix_all <- cont.matrix_all[,grep('RPE|Cornea|Retin|Lens|ESC|RetinalEpithelium', ignore.case=T, colnames(cont.matrix_all))] 
+
 
 vfit_all <- lmFit(v_eye_gtex, design_eye_and_gtex)
-cont.matrix_all <- cont.matrix_all[colnames(vfit_all),] # reorder to match vfit_all
+cont.matrix_all <- cont.matrix_all[colnames(vfit_all),] # reorder rows to match vfit_all
 vfit_all <- contrasts.fit(vfit_all, contrasts=cont.matrix_all)
 efit_all <- eBayes(vfit_all)
 
@@ -80,7 +84,7 @@ limma_de_data = list()
 for (i in colnames(efit_all)){
   limma_de_data[[i]] <- topTable(efit_all, coef=i, adjust.method = 'fdr', number=300000)
 }
-names(limma_de_data) <- gsub('-','_vs_', names(limma_de_data))
+#names(limma_de_data) <- gsub('-','_vs_', names(limma_de_data))
 
 save(efit_all, file = output_limma_object_file)
 save(limma_de_data, file = output_list_of_df_file)
