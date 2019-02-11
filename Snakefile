@@ -225,7 +225,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
                 with open(salmon_info) as file:
                     salmonLog=json.load(file)
                     mappingscore=salmonLog["percent_mapped"]
-                if mappingscore <= 50:
+                if mappingscore <= 40:
                     with open(log1,'w+') as logFile:
                         logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
                 else:
