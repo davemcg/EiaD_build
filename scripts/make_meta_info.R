@@ -15,16 +15,17 @@ tx_file <- args[10]
 gene_file <- args[11]
 gene_tx_info <- args[12]
 
-sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep = '\t')
-colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','Tissue','Sub_Tissue','Origin')
+sample_design <- read_tsv(sample_metadata)
+colnames(sample_design)[1] <- 'sample_accession'
+#colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','Tissue','Sub_Tissue','Origin')
 sra_con <- dbConnect(RSQLite::SQLite(),sql_file)
 sra_query <- "SELECT * FROM sra WHERE sample_accession='BLANK'"
-eye_tissue <- c('Retina','RPE','Cornea','ESC')
+eye_tissue <- c('Retina','RPE','Cornea','ESC', 'Lens')
 core_tight <- lapply(sample_design$sample_accession,function(x) dbGetQuery(sra_con, gsub('BLANK',x,sra_query)))%>%do.call(rbind,.) %>%
   distinct%>%select(study_accession, study_title, study_abstract, sample_accession, run_accession, sample_attribute) %>%
-  right_join(sample_design[,c(1,4,5)],by='sample_accession')
-core_tight$Origin <-  strsplit(core_tight[,'Sub_Tissue'],'_') %>% 
-  sapply(function(x) ifelse(x[[1]] %in% eye_tissue, x[[2]], 'Tissue'))
+  right_join(sample_design %>% select(sample_accession, Tissue, Sub_Tissue, Origin, Age_Days),by='sample_accession')
+#core_tight$Origin <-  strsplit(core_tight[,'Sub_Tissue'],'_') %>% 
+#  sapply(function(x) ifelse(x[[1]] %in% eye_tissue, x[[2]], 'Tissue'))
 # add EMTAB
 core_tight <- core_tight %>% mutate(Origin = case_when(grepl('MTAB', sample_accession) ~ 'Adult Tissue',
 													   TRUE ~ Origin),
@@ -34,7 +35,7 @@ core_tight <- core_tight %>% mutate(Origin = case_when(grepl('MTAB', sample_acce
 									                            TRUE ~ study_accession),
 	                                study_abstract = case_when(grepl('MTAB', sample_accession) ~ 'RNA-seq of post-mort retina donor without clinically relevant visual impairment. Ploy-A enriched. 75-nt paired-end. Short time lapse between tissue sampling and cDNA generation.',
                                                                TRUE ~ study_abstract))
-
+# prettify formatting
 core_tight <- core_tight %>% 
   as.tibble() %>% 
   rowwise() %>% 
@@ -68,12 +69,12 @@ core_tight <- left_join(core_tight, bind_rows(SRP159246,SRP119766), by = "sample
          -sample_attribute.x, -sample_attribute.y) 
 
 # rewrite Origin from Sub_Tissue
-core_tight <- core_tight %>% mutate(Origin = case_when( grepl('Transformed', Sub_Tissue, ignore.case = T) ~ 'Cell Line',
-                                               grepl('Fetal', Sub_Tissue) ~ 'Fetal Tissue',
-                                               grepl('Stem', Sub_Tissue) ~ 'Stem Cell',
-                                               grepl('Organoid', Sub_Tissue) ~ 'Organoid',
-                                               grepl('Cell Line', Sub_Tissue) ~ 'Cell Line',
-                                               TRUE ~ 'Adult Tissue')) 
+#core_tight <- core_tight %>% mutate(Origin = case_when( grepl('Transformed', Sub_Tissue, ignore.case = T) ~ 'Cell Line',
+#                                               grepl('Fetal', Sub_Tissue) ~ 'Fetal Tissue',
+#                                               grepl('Stem', Sub_Tissue) ~ 'Stem Cell',
+#                                               grepl('Organoid', Sub_Tissue) ~ 'Organoid',
+#                                               grepl('Cell Line', Sub_Tissue) ~ 'Cell Line',
+#                                               TRUE ~ 'Adult Tissue')) 
 
 # update Kept field with specific reasons
 # e.g. failed because of poor salmon alignment stats or tsne clustering (likely mislabled tissue/tube swap)
