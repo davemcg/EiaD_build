@@ -22,10 +22,11 @@ setwd(working_dir)
 # load gtf to construct gene <-> transcript_mapping
 # load sample tissue classification for qsmooth
 
-sample_design <- read.table(sample_metadata, stringsAsFactors = F, header=F, sep = '\t')
+sample_design <- read_tsv(sample_metadata)
+colnames(sample_design)[1] <- 'sample_accession'
 gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type")]
-colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','subtissue','origin')
+#colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','Sub_Tissue','origin')
 removal_log=data.frame()
 
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
@@ -44,14 +45,14 @@ if (level == 'transcript') {
 tpms <- as.data.frame(txi.lsTPMs$counts)
 colnames(tpms)  <-  samplenames
 ## remove samples that failed to meet mapping %
-bad_mapping <- read.table(bad_map_file,stringsAsFactors = F) %>% pull(V2)
-if(length(bad_mapping) > 0){
-    bm = data.frame(sample=sample_design$sample_accession[sample_design$sample_accession%in%bad_mapping],
+bad_mapping_samples <- read.table(bad_map_file,stringsAsFactors = F) %>% filter(as.numeric(V7) < 35) %>% pull(V2)
+if(length(bad_mapping_samples) > 0){
+    bm = data.frame(sample=sample_design$sample_accession[sample_design$sample_accession%in%bad_mapping_samples],
                     reason='low salmon mapping rate')
     removal_log = rbind(removal_log, bm)
     }
 
-sample_design <- sample_design[!sample_design$sample_accession%in%bad_mapping,]
+sample_design <- sample_design[!sample_design$sample_accession%in%bad_mapping_samples,]
 samplenames <- sample_design$sample_accession
 tpms <- tpms[,samplenames]
 
@@ -90,7 +91,7 @@ colnames(lsTPM_librarySize) <- colnames(tpms)
 
 #quantile normalize samples
 sample_design <- sample_design %>% filter(sample_accession  %in% colnames(lsTPM_librarySize))
-qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$tissue))
+qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$Tissue))
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
@@ -116,14 +117,14 @@ tsne_plot <- tsne_plot %>% left_join(., sample_design %>% filter(sample_accessio
 #find outliers based on tsne grouping. calculate the center of each group, and look for points n standard deviations away
 e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
 tsne_plot$outlier <- NA
-for(t in tsne_plot$subtissue){
-    tsne.subtissue <- filter(tsne_plot,subtissue==t)
-    center <- c(mean(tsne.subtissue$X1),mean(tsne.subtissue$X2))
-    dist <- apply(tsne.subtissue[,1:2],1,function(x) e_Dist(x,center))
+for(t in tsne_plot$Sub_Tissue){
+    tsne.Sub_Tissue <- filter(tsne_plot,Sub_Tissue==t)
+    center <- c(mean(tsne.Sub_Tissue$X1),mean(tsne.Sub_Tissue$X2))
+    dist <- apply(tsne.Sub_Tissue[,1:2],1,function(x) e_Dist(x,center))
     n=4 #number of standard deviations a point is allowed to be from the center
     allowed <- c(mean(dist)-n*sd(dist),mean(dist)+n*sd(dist))
     outliers <- dist<allowed[1] | dist> allowed[2]
-    tsne_plot[tsne_plot$subtissue==t,]$outlier <- outliers
+    tsne_plot[tsne_plot$Sub_Tissue==t,]$outlier <- outliers
 }
 tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
 # ggplot(tsne_plot,aes(x=X1,y=X2,col=tissue, shape=outlier))+
