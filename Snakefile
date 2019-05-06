@@ -21,6 +21,8 @@ def readSampleFile(samplefile):
     res={}
     with open(samplefile) as file:
         for line in file:
+            if line[0] == '#':
+                continue
             info=line.strip('\n').split('\t')
             res[info[0]]={'files':info[1].split(','),'paired':True if info[2]=='y' else False, 'tissue':info[3],'subtissue':info[4]}
     return(res)
@@ -225,7 +227,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
                 with open(salmon_info) as file:
                     salmonLog=json.load(file)
                     mappingscore=salmonLog["percent_mapped"]
-                if mappingscore <= 40:
+                if mappingscore <= 35:
                     with open(log1,'w+') as logFile:
                         logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
                 else:
@@ -258,12 +260,12 @@ else:
                 salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
             sp.run(salmon_command,shell=True)
             log1='logs/{}.rq.log'.format(id)
-            salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
+            salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format(id)
             if os.path.exists(salmon_info):
                 with open(salmon_info) as file:
                     salmonLog=json.load(file)
                     mappingscore=salmonLog["percent_mapped"]
-                if mappingscore <= 50:
+                if mappingscore <= 35:
                     with open(log1,'w+') as logFile:
                         logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
                 else:
