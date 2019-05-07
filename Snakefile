@@ -283,6 +283,19 @@ rule process_poor_mapped_samples:
         for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
         '''
 
+rule extract_mapping_rate:
+	input:
+		expand('RE_quant_files/{sampleID}/quant.sf', sampleID=sample_names)
+	output: 'results/mapping_rates.txt'
+	shell:
+		'''
+		for i in {input}; 
+			do echo "$i" | cut -f2 -d"/" | xargs printf ;
+			printf " "; 
+			grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
+		done > {output}
+		'''
+
 '''
 ***** Produce files for eyeIntegration web app
 '''
