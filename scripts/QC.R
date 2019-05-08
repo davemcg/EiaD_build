@@ -107,36 +107,31 @@ if (level == 'transcript'){
 variance <- apply(TPM, 1, var, na.rm=TRUE)
 TPM$variance <- variance
 high_var_TPM <- TPM %>% arrange(variance) %>% tail(3000) %>% select(-variance)
-
-set.seed(23235)
-tsne_out <- Rtsne(as.matrix(log2(t(high_var_TPM)+1)),perplexity = 50, check_duplicates = FALSE, theta=0.0 )
-tsne_plot <- data.frame(tsne_out$Y)
-tsne_plot$sample_accession <- colnames(high_var_TPM)
-tsne_plot <- tsne_plot %>% left_join(., sample_design %>% filter(sample_accession %in% colnames(tpms_smoothed_filtered)), by = 'sample_accession')
-
-#find outliers based on tsne grouping. calculate the center of each group, and look for points n standard deviations away
-e_Dist <- function(p1,p2) return(sqrt(sum((p1-p2)^2)))
-tsne_plot$outlier <- NA
-for(t in tsne_plot$Sub_Tissue){
-    tsne.Sub_Tissue <- filter(tsne_plot,Sub_Tissue==t)
-    center <- c(mean(tsne.Sub_Tissue$X1),mean(tsne.Sub_Tissue$X2))
-    dist <- apply(tsne.Sub_Tissue[,1:2],1,function(x) e_Dist(x,center))
-    n=4 #number of standard deviations a point is allowed to be from the center
-    allowed <- c(mean(dist)-n*sd(dist),mean(dist)+n*sd(dist))
-    outliers <- dist<allowed[1] | dist> allowed[2]
-    tsne_plot[tsne_plot$Sub_Tissue==t,]$outlier <- outliers
+cor_outlier_identification <- function(df){
+    cor_mat <- cor(df, method = 'spearman')# pairwise cor
+    avg_cor <- rowMeans(cor_mat)#avg cor per sapmle
+    grand_cor <- mean(avg_cor)# global avg cor
+    dist <- avg_cor-grand_cor
+    D <- dist/median(dist)
+    D[is.nan(D)] <- Inf #possile for avg cor and grand cor to be  the same
+    names(D) <- colnames(df)
+    D
 }
-tsne_plot$outlier[is.na(tsne_plot$outlier)] <- F
-# ggplot(tsne_plot,aes(x=X1,y=X2,col=tissue, shape=outlier))+
-#   geom_point(size=3)+
-#   ggtitle('outlier from tSNE data')+
-#   theme_minimal()
-if(sum(tsne_plot$outlier) > 0){
-    outliers = data.frame(sample = colnames(tpms_smoothed_filtered)[tsne_plot$outlier],reason = 'outlier')
+
+scores <- lapply(unique(sample_design$Sub_Tissue), function(x)filter(sample_design, Sub_Tissue == x) %>% 
+                     pull(sample_accession) %>% high_var_TPM[,.] %>% cor_outlier_identification ) %>% do.call (c,.)
+
+low_cor <- scores < -17.5
+
+removed <-  names(scores)[low_cor]
+
+
+
+if(length(removed) > 0){
+    outliers = data.frame(sample = removed,reason = 'outlier')
     removal_log = rbind(removal_log,outliers)
 }
 
-trimmed_counts_smoothed <- tpms_smoothed_filtered[,!tsne_plot$outlier]
-trimmed_counts_smoothed <- trimmed_counts_smoothed %>% rownames_to_column('ID')
+trimmed_counts_smoothed <- tpms_smoothed_filtered  %>% rownames_to_column('ID') %>% select( -removed)
 write_csv(trimmed_counts_smoothed, path = output_file)
 write_tsv(removal_log, path = qc_remove_output_file)
