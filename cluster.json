@@ -37,9 +37,9 @@
 	},
 	"find_tx_low_usage" :
 	{
-		"mem" : "24g"
+		"mem" : "64g"
 	},
-	"reQuantify_Salmon" :
+	"re_run_Salmon" :
 	{
 		"partition":"norm",
 		"time" : "12:00:00",
@@ -48,11 +48,11 @@
 	},
 	"gene_quantification_and_normalization" :
 	{
-		"mem" : "24g"
+		"mem" : "64g"
 	},
 	"calculate_mean_rank_decile" :
 	{
-		"mem" : "24g"
+		"mem" : "64g"
 	},
 	"GO_term_enrichment" :
 	{
@@ -62,14 +62,14 @@
 	},
 	"make_SQLite_db" :
 	{
-		"mem" : "32g"
+		"mem" : "64g"
 	},
 	"tSNE" :
 	{
-		"mem" : "32g"
+		"mem" : "64g"
 	},
 	"differential_expression" :
 	{
-		"mem" : "16g"
+		"mem" : "64g"
 	}
 }
