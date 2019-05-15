@@ -29,7 +29,7 @@ def readSampleFile(samplefile):
 
 def lookupRunfromID(card,sample_dict):
     id=card
-    if 'E-MTAB' in card: #not the best but it works
+    if 'BLOOP_E-MTAB' in card: #not the best but it works
         return('bam_files/{}.bam'.format(id[:-2]))
     else:
         if '_' in id:
@@ -100,7 +100,7 @@ if config['download_fastq'].upper() == 'YES':
 
 # combine multiple fastq files together
 rule aggregate_fastqs:
-    input:lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict)
+    input:ancient(lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict))
     output:'fastq_files/{sampleID}.fastq.gz'
     run:
         #this can use some cleaning up - rule runs twice for paired
@@ -144,7 +144,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
 
 
     rule run_salmon:
-        input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
+        input: ancient(lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID)),
             'ref/salmonindex'
         output: 'quant_files/{sampleID}/quant.sf'
         log: 'logs/{sampleID}.log'
@@ -153,9 +153,9 @@ if config['build_new_salmon_index'].upper() == 'YES':
             #tissue=wildcards.tissue
             paired=sample_dict[id]['paired']
             if paired:
-                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4  -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'quant_files/{}'.format(id))
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --validateMappings --gcBias --seqBias -p 4  -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'quant_files/{}'.format(id))
             else:
-                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 4 -r {} -o {}'.format(input[1],input[0],'quant_files/{}'.format(id))
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --validateMappings --gcBias --seqBias -p 4 -r {} -o {}'.format(input[1],input[0],'quant_files/{}'.format(id))
             sp.run(salmon_command,shell=True)
             log1='logs/{}.log'.format(id)
             salmon_info='quant_files/{}/aux_info/meta_info.json'.format(id)
@@ -181,7 +181,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
         shell:
             '''
             module load R
-            Rscript {config[scripts_dir]}/soneson_low_usage.R {ref_GTF_basic}
+            Rscript {config[scripts_dir]}/soneson_low_usage.R {config[working_dir]} {ref_GTF_basic}
             '''
 
     rule remove_tx_low_usage:
@@ -217,9 +217,9 @@ if config['build_new_salmon_index'].upper() == 'YES':
             #tissue=wildcards.tissue
             paired=sample_dict[id]['paired']
             if paired:
-                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --validateMappings --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
             else:
-                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --validateMappings --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
             sp.run(salmon_command,shell=True)
             log1='logs/{}.rq.log'.format(id)
             salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format( id)
@@ -255,9 +255,9 @@ else:
             #tissue=wildcards.tissue
             paired=sample_dict[id]['paired']
             if paired:
-                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --validateMappings --gcBias --seqBias -p 8 -1 {} -2 {} -o {}'.format(input[2],input[0],input[1],'RE_quant_files/{}'.format(id))
             else:
-                salmon_command=loadSalmon + 'salmon quant -i {} -l A --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
+                salmon_command=loadSalmon + 'salmon quant -i {} -l A --validateMappings --gcBias --seqBias -p 8 -r {} -o {}'.format(input[1],input[0],'RE_quant_files/{}'.format(id))
             sp.run(salmon_command,shell=True)
             log1='logs/{}.rq.log'.format(id)
             salmon_info='RE_quant_files/{}/aux_info/meta_info.json'.format(id)
