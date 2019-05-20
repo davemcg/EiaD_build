@@ -136,4 +136,4 @@ if(length(removed) > 0){
 trimmed_counts_smoothed <- tpms_smoothed_filtered  %>% rownames_to_column('ID') %>% select( -removed)
 write_csv(trimmed_counts_smoothed, path = output_file)
 write_tsv(removal_log, path = qc_remove_output_file)
-write_tsv(scores, path = cor_scores)
+write_tsv(scores %>% as_tibble(rownames = 'sample'), path = cor_scores)

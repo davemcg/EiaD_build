@@ -15,6 +15,7 @@ metadata_file <- args[9]
 tx_file <- args[10]
 gene_file <- args[11]
 gene_tx_info <- args[12]
+script_dir <- args[13]
 
 sample_design <- read_tsv(sample_metadata)
 colnames(sample_design)[1] <- 'sample_accession'
@@ -53,7 +54,7 @@ samples_kept=colnames(gene_qc_tpms) %>%
 core_tight=left_join(core_tight,samples_kept, by='sample_accession')
 core_tight$Kept[is.na(core_tight$Kept)]='removed'
 # build swaroop AMD project metadata
-amd <- read_tsv('~/git/EiaD_build/data/complete_swaroop_metadata_sraAdded.tsv') %>% data.table()
+amd <- read_tsv(paste0(script_dir, '/../data/complete_swaroop_metadata_sraAdded.tsv')) %>% data.table()
 cols <- colnames(amd)[1:27]
 amd[, sample_attribute := do.call(paste, 
                                   c(lapply(cols, function(x) paste(x, get(x), sep=": ")),              
@@ -62,7 +63,7 @@ amd <- amd %>% mutate(study_title = 'Integrated analysis of genetic variants reg
                       study_accession = 'SRP151763',
                       study_abstract = 'Age-related macular degeneration (AMD) is a complex multifactorial disease with at least 34 loci contributing to genetic susceptibility. To gain functional understanding of AMD genetics, we generated transcriptional profiles of retina from 453 individuals including both controls and cases at distinct stages of AMD. We integrated retinal transcriptomes, covering 13,662 protein-coding and 1,462 noncoding genes, with genotypes at over 9 million common single nucleotide polymorphisms (SNPs) for expression quantitative trait loci (eQTL) analysis of a tissue not included in Genotype-Tissue Expression (GTEx) and other large datasets. Cis-eQTL analysis revealed 10,474 genes under genetic regulation, including 4,541 eQTLs detected only in the retina. We then integrated the AMD-genome-wide association studies (GWAS) data with eQTLs and ascertained target genes at six loci. Furthermore, using transcriptome wide association analysis (TWAS), we identified 23 additional AMD-associated genes, including RLBP1, HIC1 and PARP12. Our studies expand the genetic landscape of AMD leading to direct targets for biological evaluation and establish the Genotype-Retina Expression (GREx) database as a resource for post-GWAS interpretation of retina-associated traits including glaucoma and diabetic retinopathy. Overall design: Retinal samples from 523 aged post-mortem human subjects from a spectrum of age-related macular degeneration (AMD) were RNA-seq profiled.') %>% rename(run_accession = run) %>% select(run_accession, study_title, sample_attribute, study_accession, study_abstract)
 # build SRP105756
-SRP105756 <- read_tsv('~/git/EiaD_build/data/SRP105756.txt') %>% data.table()
+SRP105756 <- read_tsv(paste0(script_dir, '/../data/SRP105756.txt')) %>% data.table()
 cols <- colnames(SRP105756)[9:12]
 SRP105756[, sample_attribute := do.call(paste, 
                                   c(lapply(cols, function(x) paste(x, get(x), sep=": ")),              

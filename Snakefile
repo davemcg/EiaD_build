@@ -312,11 +312,11 @@ rule gene_quantification_and_normalization:
         gtf='ref/gencodeAno_bsc.gtf',
         bad_map='ref/bad_mapping.txt'
     params:
-        working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
+        working_dir = config['working_dir']
     output:
         tpm = 'results/smoothed_filtered_tpms_{level}.csv',
         removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
-		cor_scores = 'results/cor_scores.tsv'
+        cor_scores = 'results/cor_scores_{level}.tsv'
     shell:
         '''
         module load R
@@ -344,7 +344,8 @@ rule make_meta_info:
           {config[sqlfile]} \
           {input} \
           {params.working_dir} \
-          {output}
+          {output} \
+          {config[scripts_dir]}
         '''
 
 rule differential_expression:
