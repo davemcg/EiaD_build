@@ -315,7 +315,8 @@ rule gene_quantification_and_normalization:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:
         tpm = 'results/smoothed_filtered_tpms_{level}.csv',
-        removed_samples = 'results/samples_removed_by_QC_{level}.tsv'
+        removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
+		cor_scores = 'results/cor_scores.tsv'
     shell:
         '''
         module load R
