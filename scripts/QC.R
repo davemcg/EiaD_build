@@ -15,6 +15,7 @@ level = args[4] # transcript or gene level quantification
 bad_map_file = args[5]
 output_file = args[6]
 qc_remove_output_file = args[7]
+cor_scores = args[8]
 setwd(working_dir)
 
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
@@ -135,3 +136,4 @@ if(length(removed) > 0){
 trimmed_counts_smoothed <- tpms_smoothed_filtered  %>% rownames_to_column('ID') %>% select( -removed)
 write_csv(trimmed_counts_smoothed, path = output_file)
 write_tsv(removal_log, path = qc_remove_output_file)
+write_tsv(scores, path = cor_scores)
