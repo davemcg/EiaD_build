@@ -90,8 +90,7 @@ core_tight <- left_join(core_tight, bind_rows(SRP159246,SRP119766, amd, SRP10575
                                    TRUE ~ run_accession.x),
          study_accession = case_when(is.na(study_accession.x) ~ study_accession.y,
                                      TRUE ~ study_accession.x)) %>% 
-  select(sample_accession, study_accession, study_title, study_abstract, sample_attribute, 
-         run_accession:Kept, -ends_with('.x'), -ends_with('.y'))
+  select(-ends_with('.x'), -ends_with('.y'))
 
 # rewrite Origin from Sub_Tissue
 #core_tight <- core_tight %>% mutate(Origin = case_when( grepl('Transformed', Sub_Tissue, ignore.case = T) ~ 'Cell Line',
