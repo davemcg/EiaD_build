@@ -30,7 +30,8 @@ gtex_sample$Tissue <- gtex_sample$Sub_Tissue <-  'Body'
 deg_sample_table <- rbind(eye_samples,gtex_sample,body_samples %>% mutate(Sub_Tissue = Tissue))
 deg_counts <- lstpms_smoothed[,deg_sample_table$sample_accession]
 Sub_Tissue <- deg_sample_table$Sub_Tissue %>% as.factor()
-design_eye_and_gtex <- model.matrix(~0 + Sub_Tissue )
+study <- deg_sample_table$study_accession %>% as.factor()
+design_eye_and_gtex <- model.matrix(~0 + study + Sub_Tissue )
 colnames(design_eye_and_gtex) <- levels(Sub_Tissue)
 
 y_eye_gtex <- DGEList(deg_counts)

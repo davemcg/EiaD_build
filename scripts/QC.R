@@ -16,6 +16,7 @@ bad_map_file = args[5]
 output_file = args[6]
 qc_remove_output_file = args[7]
 cor_scores = args[8]
+batchCor_output_file = args[9]
 setwd(working_dir)
 
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
@@ -70,7 +71,6 @@ if( sum(!keep_median)>0){
 
 }
 
-
 if (level == 'transcript'){
     #to keep the samples the same between the gene and tx level, filter samples only at the gene level
     #going from cut of 1 > .5 keeps about 40k tx's
@@ -98,13 +98,31 @@ lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
 tpms_smoothed_filtered <- lstpms_smoothed
 
-#cluster with tSNE, then run clustered data throught
-# use 3000 most variable protein coding genes
+# remove batch effect of studies
+# and use model.matrix for ~sub_tissue design
+# to correct TPM as per limma
+# these corrected counts ARE NOT USED BY LIMMA for diff expression
+# but are rather for: 
+# 	tSNE
+# 	PCA
+# 	boxplots/heatmaps
+#	cor_outlier_identification() below
+design <- model.matrix(~ 0 + as.factor(sample_design$Sub_Tissue))
+tpms_smoothed_filtered_batchCor <- limma::removeBatchEffect(log2(tpms_smoothed_filtered+1), 
+	batch = as.factor(sample_design$study_accession),
+	design = design)
+tpms_smoothed_filtered_batchCor <- (2 ** tpms_smoothed_filtered_batchCor) - 1
+tpms_smoothed_filtered_batchCor[tpms_smoothed_filtered_batchCor < 0] <- 0
+tpms_smoothed_filtered_batchCor <- tpms_smoothed_filtered_batchCor %>% data.frame()
+colnames(tpms_smoothed_filtered_batchCor) <- colnames(tpms_smoothed_filtered)
+
 if (level == 'transcript'){
-	TPM <- lstpms_smoothed[anno %>% filter(gene_type == 'protein_coding', transcript_id %in% row.names(lstpms_smoothed)) %>% pull(transcript_id) %>% unique(), ]
+	TPM <- tpms_smoothed_filtered_batchCor[anno %>% filter(gene_type == 'protein_coding', transcript_id %in% row.names(tpms_smoothed_filtered_batchCor)) %>% pull(transcript_id) %>% unique(), ]
 } else {
-	TPM <- lstpms_smoothed[anno %>% filter(gene_type == 'protein_coding', gene_name %in% row.names(lstpms_smoothed)) %>% pull(gene_name) %>% unique(), ]
+	TPM <- tpms_smoothed_filtered_batchCor[anno %>% filter(gene_type == 'protein_coding', gene_name %in% row.names(tpms_smoothed_filtered_batchCor)) %>% pull(gene_name) %>% unique(), ]
 }
+TPM <- TPM %>% data.frame()
+colnames(TPM) <- colnames(tpms_smoothed_filtered)
 variance <- apply(TPM, 1, var, na.rm=TRUE)
 TPM$variance <- variance
 high_var_TPM <- TPM %>% arrange(variance) %>% tail(3000) %>% select(-variance)
@@ -119,7 +137,7 @@ cor_outlier_identification <- function(df){
     D
 }
 
-scores <- lapply(unique(sample_design$Sub_Tissue), function(x)filter(sample_design, Sub_Tissue == x) %>% 
+scores <- lapply(unique(sample_design$Sub_Tissue), function(x) filter(sample_design, Sub_Tissue == x) %>% 
                      pull(sample_accession) %>% high_var_TPM[,.] %>% cor_outlier_identification ) %>% do.call (c,.)
 
 low_cor <- scores < -17.5
@@ -133,7 +151,10 @@ if(length(removed) > 0){
     removal_log = rbind(removal_log,outliers)
 }
 
-trimmed_counts_smoothed <- tpms_smoothed_filtered  %>% rownames_to_column('ID') %>% select( -removed)
+trimmed_counts_smoothed <- tpms_smoothed_filtered  %>% rownames_to_column('ID') %>% select(-removed)
+# this for limma DE
 write_csv(trimmed_counts_smoothed, path = output_file)
+# this for sqlite file for boxplot / tSNE / PCA 
+write_csv(tpms_smoothed_filtered_batchCor %>% rownames_to_column('ID') %>% select(-removed), path = batchCor_output_file)
 write_tsv(removal_log, path = qc_remove_output_file)
 write_tsv(scores %>% as_tibble(rownames = 'sample'), path = cor_scores)

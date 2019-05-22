@@ -316,7 +316,8 @@ rule gene_quantification_and_normalization:
     output:
         tpm = 'results/smoothed_filtered_tpms_{level}.csv',
         removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
-        cor_scores = 'results/cor_scores_{level}.tsv'
+        cor_scores = 'results/cor_scores_{level}.tsv',
+        batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
     shell:
         '''
         module load R
@@ -365,7 +366,7 @@ rule differential_expression:
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
 rule calculate_mean_rank_decile:
     input:
-        lsTPM_file = 'results/smoothed_filtered_tpms_{level}.csv',
+        lsTPM_file = 'results/smoothed_filtered_tpms_batchCor_{level}.csv',
         metadata_file = 'results/core_tight.Rdata',
     params:
         working_dir = config['working_dir']
@@ -424,7 +425,7 @@ rule GO_term_enrichment:
 rule tSNE:
     input:
         metadata = 'results/core_tight.Rdata',
-        tpm = 'results/smoothed_filtered_tpms_gene.csv',
+        tpm = 'results/smoothed_filtered_tpms_batchCor_gene.csv',
         gtf = 'results/gene_tx_gtf_info.Rdata'
     params:
         working_dir = config['working_dir']
@@ -459,7 +460,7 @@ rule make_word_clouds:
 # create SQLite expression db
 rule make_SQLite_db:
     input:
-        tpms = expand('results/smoothed_filtered_tpms_{level}.csv', level = ['gene', 'transcript']),
+        tpms = expand('results/smoothed_filtered_tpms_batchCor_{level}.csv', level = ['gene', 'transcript']),
         tx_names = 'results/tx_names.Rdata',
         DE = expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene', 'transcript']),
         DE_tests = 'results/de_comparison_name_list_gene.Rdata',
