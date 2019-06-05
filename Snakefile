@@ -163,7 +163,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
                 with open(salmon_info) as file:
                     salmonLog=json.load(file)
                     mappingscore=salmonLog["percent_mapped"]
-                if mappingscore <= 50:
+                if mappingscore <= 35:
                     with open(log1,'w+') as logFile:
                         logFile.write('Sample {} failed QC mapping Percentage: {}'.format(id,mappingscore))
             else:
@@ -283,13 +283,14 @@ rule process_poor_mapped_samples:
         for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
         '''
 
+localrules:extract_mapping_rate
 rule extract_mapping_rate:
 	input:
 		expand('RE_quant_files/{sampleID}/quant.sf', sampleID=sample_names)
 	output: 'results/mapping_rates.txt'
 	shell:
 		'''
-		for i in {input}; 
+		for i in RE_quant_files/*/logs/salmon_quant.log; 
 			do echo "$i" | cut -f2 -d"/" | xargs printf ;
 			printf " "; 
 			grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
@@ -310,7 +311,8 @@ rule gene_quantification_and_normalization:
     input:
         tpms=expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),
         gtf='ref/gencodeAno_bsc.gtf',
-        bad_map='ref/bad_mapping.txt'
+        bad_map='ref/bad_mapping.txt',
+        mapping_rate='results/mapping_rates.txt'
     params:
         working_dir = config['working_dir']
     output:
@@ -321,14 +323,15 @@ rule gene_quantification_and_normalization:
     shell:
         '''
         module load R
-        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {output}
+        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {input.mapping_rate} {output}
         '''
 
 # output sample metadata and gene/tx lists for eyeIntegration
 rule make_meta_info:
     input:
         expand('results/smoothed_filtered_tpms_{level}.csv',level = ['gene','transcript']),
-        expand('results/samples_removed_by_QC_{level}.tsv', level = ['gene','transcript'])
+        expand('results/samples_removed_by_QC_{level}.tsv', level = ['gene','transcript']),
+        'results/mapping_rates.txt'
     params:
         working_dir = config['working_dir']
     output:
@@ -350,7 +353,9 @@ rule make_meta_info:
         '''
 
 rule differential_expression:
-    input: 'results/smoothed_filtered_tpms_{level}.csv'
+    input: 
+        'results/smoothed_filtered_tpms_{level}.csv',
+        'results/core_tight.Rdata'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
     output:

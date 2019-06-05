@@ -10,12 +10,15 @@ gene_qc_file=args[4]
 tx_qc_file=args[5]
 samples_remove_gene=args[6]
 samples_remove_tx=args[7]
-setwd(args[8])
-metadata_file <- args[9]
-tx_file <- args[10]
-gene_file <- args[11]
-gene_tx_info <- args[12]
-script_dir <- args[13]
+mapping_rate <- read_delim(args[8], delim = ' ', col_names = F) %>% 
+  mutate(X2 = str_sub(X2, 1, 4) %>% as.numeric()) %>%  
+  rename(sample_accession = X1, mapping_rate = X2)
+setwd(args[9])
+metadata_file <- args[10]
+tx_file <- args[11]
+gene_file <- args[12]
+gene_tx_info <- args[13]
+script_dir <- args[14]
 
 sample_design <- read_tsv(sample_metadata)
 colnames(sample_design)[1] <- 'sample_accession'
@@ -107,6 +110,8 @@ core_tight <- left_join(core_tight, reasons, by = c('sample_accession' = 'sample
   mutate(Kept = case_when(!is.na(reason) ~ reason,
                           TRUE ~ Kept)) %>%
   select(-reason)
+# add mapping rate
+core_tight <- left_join(core_tight, mapping_rate, by = 'sample_accession')
 
 save(core_tight,file = metadata_file)
 
