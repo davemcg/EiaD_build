@@ -56,30 +56,31 @@ salmonindex='ref/salmonindex'
 salmonindex_trimmed='ref/salmonindex_trimmed'
 STARindex='ref/STARindex'
 ref_fasta='ref/gencodeRef.fa'
-ref_GTF='ref/gencodeAno.gtf'
+#ref_GTF='ref/gencodeAno.gtf'
 ref_GTF_basic='ref/gencodeAno_bsc.gtf'
-ref_GTF_PA='ref/gencodeAno_pa.gtf'
-ref_PA='ref/gencodePA.fa'
+#ref_GTF_PA='ref/gencodeAno_pa.gtf'
+#eref_PA='ref/gencodePA.fa'
 badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
+        'ref/salmonindexTrimmed',
         'results/word_clouds',
         config['EiaD_sqlite_file']
 '''
 ****PART 1**** download files
 '''
 rule downloadGencode:
-    output:ref_fasta,ref_GTF_basic,ref_PA
+    output: ref_fasta,ref_GTF_basic
     shell:
         '''
         wget -O ref/gencodeRef.fa.gz {config[refFasta_url]}
         wget -O ref/gencodeAno_bsc.gtf.gz {config[refGTF_basic_url]}
-        wget -O ref/gencodePA.fa.gz {config[refPA_url]}
+        #wget -O ref/gencodePA.fa.gz {config[refPA_url]}
         gunzip ref/gencodeRef.fa.gz
         gunzip ref/gencodeAno_bsc.gtf.gz
-        gunzip ref/gencodePA.fa.gz
+        #gunzip ref/gencodePA.fa.gz
         '''
 
 # set to 'NO' in config.yaml if you have fastq files
@@ -185,7 +186,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
             '''
 
     rule remove_tx_low_usage:
-        input:'tx_for_removal.txt',ref_fasta
+        input:'tx_for_removal.txt', ref_fasta
         output: 'ref/gencodeRef_trimmed.fa'
         shell:
             '''
@@ -285,17 +286,17 @@ rule process_poor_mapped_samples:
 
 localrules:extract_mapping_rate
 rule extract_mapping_rate:
-	input:
-		expand('RE_quant_files/{sampleID}/quant.sf', sampleID=sample_names)
-	output: 'results/mapping_rates.txt'
-	shell:
-		'''
-		for i in RE_quant_files/*/logs/salmon_quant.log; 
-			do echo "$i" | cut -f2 -d"/" | xargs printf ;
-			printf " "; 
-			grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
-		done > {output}
-		'''
+    input:
+        expand('RE_quant_files/{sampleID}/quant.sf', sampleID=sample_names)
+    output: 'results/mapping_rates.txt'
+    shell:
+        '''
+        for i in RE_quant_files/*/logs/salmon_quant.log; 
+            do echo "$i" | cut -f2 -d"/" | xargs printf ;
+            printf " "; 
+            grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
+        done > {output}
+        '''
 
 '''
 ***** Produce files for eyeIntegration web app
