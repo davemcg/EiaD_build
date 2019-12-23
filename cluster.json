@@ -31,7 +31,7 @@
 	"run_salmon" :
 	{
 		"partition":"norm",
-		"time" : "8:00:00",
+		"time" : "16:00:00",
 		"mem" : "16g",
 		"cpus-per-task": "4"
 	},
@@ -48,11 +48,11 @@
 	},
 	"gene_quantification_and_normalization" :
 	{
-		"mem" : "64g"
+		"mem" : "128g"
 	},
 	"calculate_mean_rank_decile" :
 	{
-		"mem" : "64g"
+		"mem" : "128g"
 	},
 	"GO_term_enrichment" :
 	{
