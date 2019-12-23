@@ -14,10 +14,11 @@ working_dir = args[3]
 level = args[4] # transcript or gene level quantification
 bad_map_file = args[5]
 mapping_rate_file = args[6]
-output_file = args[7]
-qc_remove_output_file = args[8]
-cor_scores = args[9]
-fullCor_output_file = args[10]
+counts_file = args[7]
+output_file = args[8]
+qc_remove_output_file = args[9]
+cor_scores = args[10]
+fullCor_output_file = args[11]
 setwd(working_dir)
 
 # Qsmooth > remove median counts > remove lowly expressed genes > tSNE > DBSCAN
@@ -26,7 +27,7 @@ setwd(working_dir)
 # load sample tissue classification for qsmooth
 sample_design <- read_tsv(sample_metadata)
 colnames(sample_design)[1] <- 'sample_accession'
-gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript')
+gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript') %>% dplyr::mutate(gene_type = 'protein_coding')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type")]
 #colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','Sub_Tissue','origin')
 removal_log=data.frame()
@@ -43,10 +44,16 @@ sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 if (level == 'transcript') {
     txi.lsTPMs_tx <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = "lengthScaledTPM")
     txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
-    tpms_tx <- as.data.frame(txi.lsTPMs_tx$counts)
+    txi.tx.counts <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = 'no')
+	save(txi.tx.counts, file = counts_file) 
+    rm(txi.tx.counts) 
+	tpms_tx <- as.data.frame(txi.lsTPMs_tx$counts)
     colnames(tpms_tx) <- samplenames
 } else {
     txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
+    txi.gene.counts <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = 'no')
+	save(txi.gene.counts, file = counts_file) 
+    rm(txi.gene.counts) 
 }
 tpms <- as.data.frame(txi.lsTPMs$counts)
 colnames(tpms)  <-  samplenames
@@ -99,7 +106,7 @@ colnames(lsTPM_librarySize) <- colnames(tpms)
 
 #quantile normalize samples
 sample_design <- sample_design %>% filter(sample_accession  %in% colnames(lsTPM_librarySize))
-qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$Tissue))
+qs <- qsmooth(object = lsTPM_librarySize,group_factor = as.factor(sample_design$Tissue))
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
@@ -114,6 +121,7 @@ tpms_smoothed_filtered <- lstpms_smoothed
 # 	PCA
 # 	boxplots/heatmaps
 #	cor_outlier_identification() below
+sample_design$mapping_rate[is.na(sample_design$mapping_rate)] <- 0
 design <- model.matrix(~ 0 + as.numeric(sample_design$mapping_rate) + as.factor(sample_design$Sub_Tissue))
 tpms_smoothed_filtered_fullCor <- limma::removeBatchEffect(log2(tpms_smoothed_filtered+1), 
 	batch = as.factor(sample_design$study_accession),
