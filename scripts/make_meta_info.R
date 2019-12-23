@@ -116,7 +116,7 @@ core_tight <- left_join(core_tight, mapping_rate, by = 'sample_accession')
 save(core_tight,file = metadata_file)
 
 gtf <- rtracklayer::readGFF(gtf_file) %>% 
-  dplyr::filter(type=='transcript')
+  dplyr::filter(type=='transcript') %>% dplyr::mutate(gene_type = 'protein_coding', transcript_type = 'protein_coding')
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type", "transcript_type")] %>% 
   filter(gene_name%in%gene_qc_tpms$ID)
 
