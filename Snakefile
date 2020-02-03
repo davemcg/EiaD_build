@@ -65,6 +65,7 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 
 rule all:
     input:
+        expand('results/counts_{level}.csv.gz', level = ['gene', 'transcript']),
         'ref/salmonindexTrimmed',
         'results/word_clouds',
         config['EiaD_sqlite_file']
@@ -317,6 +318,7 @@ rule gene_quantification_and_normalization:
     params:
         working_dir = config['working_dir']
     output:
+        counts = 'results/counts_{level}.csv.gz',
         tpm = 'results/smoothed_filtered_tpms_{level}.csv',
         removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
         cor_scores = 'results/cor_scores_{level}.tsv',
@@ -445,6 +447,7 @@ rule tSNE:
           {input} \
           {output}
         '''
+
 # make word cloud png for GO enrichment 
 rule make_word_clouds:
     input:

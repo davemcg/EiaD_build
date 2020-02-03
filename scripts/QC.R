@@ -42,17 +42,25 @@ sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 
 # load data at the transcript level or merge to the gene level
 if (level == 'transcript') {
-    txi.lsTPMs_tx <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = "lengthScaledTPM")
-    txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
+    #txi.lsTPMs_tx <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = "lengthScaledTPM")
+    #txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
     txi.tx.counts <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = 'no')
-	save(txi.tx.counts, file = counts_file) 
-    rm(txi.tx.counts) 
+	counts <- txi.tx.counts$counts 
+	colnames(counts) <- samplenames
+    counts <- counts %>% as_tibble(rownames = 'ID')
+	write_csv(counts, path = counts_file) 
+    rm(txi.tx.counts)
+    rm(counts) 
 	tpms_tx <- as.data.frame(txi.lsTPMs_tx$counts)
     colnames(tpms_tx) <- samplenames
 } else {
     txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
     txi.gene.counts <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = 'no')
-	save(txi.gene.counts, file = counts_file) 
+	counts <- txi.gene.counts$counts 
+	colnames(counts) <- samplenames
+    counts <- counts %>% as_tibble(rownames = 'ID')
+	write_csv(counts, path = counts_file) 
+    rm(counts)
     rm(txi.gene.counts) 
 }
 tpms <- as.data.frame(txi.lsTPMs$counts)
