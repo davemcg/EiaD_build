@@ -10,9 +10,10 @@ gene_qc_file=args[4]
 tx_qc_file=args[5]
 samples_remove_gene=args[6]
 samples_remove_tx=args[7]
-mapping_rate <- read_delim(args[8], delim = ' ', col_names = F) %>% 
-  mutate(X2 = str_sub(X2, 1, 4) %>% as.numeric()) %>%  
-  rename(sample_accession = X1, mapping_rate = X2)
+mapping_rate <- read_delim(args[8], delim = ' ', col_names = F) %>%
+  mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
+  rename(sample_accession = X1, mapping_rate = X2) %>%
+  mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
 setwd(args[9])
 metadata_file <- args[10]
 tx_file <- args[11]

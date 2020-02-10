@@ -32,9 +32,11 @@ anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type")]
 #colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','Sub_Tissue','origin')
 removal_log=data.frame()
 
-mapping_rate <- read_delim(mapping_rate_file, delim = ' ', col_names = F) %>% 
-  mutate(X2 = str_sub(X2, 1, 4) %>% as.numeric()) %>%  
-  rename(sample_accession = X1, mapping_rate = X2)
+
+mapping_rate <- read_delim(mapping_rate_file, delim = ' ', col_names = F) %>%
+  mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
+  rename(sample_accession = X1, mapping_rate = X2) %>%
+  mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
 
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
 samplenames <- strsplit(files0,'/' )%>% sapply(function(x) x[2])
@@ -42,7 +44,7 @@ sample_design <-  filter(sample_design, sample_accession%in%samplenames)
 
 # load data at the transcript level or merge to the gene level
 if (level == 'transcript') {
-    #txi.lsTPMs_tx <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = "lengthScaledTPM")
+    txi.lsTPMs <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = "lengthScaledTPM")
     #txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
     txi.tx.counts <- tximport(files=files0,txOut = T, type = "salmon", countsFromAbundance = 'no')
 	counts <- txi.tx.counts$counts 
@@ -51,7 +53,7 @@ if (level == 'transcript') {
 	write_csv(counts, path = counts_file) 
     rm(txi.tx.counts)
     rm(counts) 
-	tpms_tx <- as.data.frame(txi.lsTPMs_tx$counts)
+	tpms_tx <- as.data.frame(txi.lsTPMs$counts)
     colnames(tpms_tx) <- samplenames
 } else {
     txi.lsTPMs <- tximport(files=files0, tx2gene =  anno[,3:2], type = "salmon", countsFromAbundance = "lengthScaledTPM")
