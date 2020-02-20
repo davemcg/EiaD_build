@@ -24,7 +24,7 @@ def readSampleFile(samplefile):
             if line[0] == '#':
                 continue
             info=line.strip('\n').split('\t')
-            res[info[0]]={'files':info[1].split(','),'paired':True if info[2]=='y' else False, 'tissue':info[3],'subtissue':info[4]}
+            res[info[0]]={'files':info[1].split(','),'paired':True if info[2]=='y' else False, 'tissue':info[3],'subtissue':info[4], 'origin':info[5], 'ms_subtissue':info[8]}
     return(res)
 
 def lookupRunfromID(card,sample_dict):
@@ -46,10 +46,21 @@ def lookupRunfromID(card,sample_dict):
                 res.append('fastqParts/{}.fastq.gz'.format(file))
     return(res)
 
+
+def salmon_input(id, sample_dict, fql):
+    paired = sample_dict[id]['paired']
+    id = fql + 'fastq_files/' + id
+    if paired:
+        return('-1 {s}_1.fastq.gz -2 {s}_2.fastq.gz'.format(s=id))
+    else:
+        return('-r {}.fastq.gz'.format(id))
+
 #configfile:'config.yaml'
+sampleFile=config['sampleFile']
+script_dir=config['scripts_dir']
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
 sample_names=sample_dict.keys()
-
+salmon_version = config['salmon_version']
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
 loadSalmon= "module load {} && ".format(config['salmon_version'])
 salmonindex='ref/salmonindex'
@@ -62,7 +73,8 @@ ref_GTF_basic='ref/gencodeAno_bsc.gtf'
 #eref_PA='ref/gencodePA.fa'
 badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
-
+fql=config['fastq_path']
+working_dir=config['working_dir']
 rule all:
     input:
         expand('results/counts_{level}.csv.gz', level = ['gene', 'transcript']),
@@ -245,6 +257,32 @@ if config['build_new_salmon_index'].upper() == 'YES':
 # the idea is not to do the fairly computationally expensive step of building salmon
 # indices twice and running salmon twice, as adding a few new samples is not
 # going to alter to the salon index much
+elif config['multi_salmon_index'].upper() == 'YES':
+    rule run_salmon_ms:
+        input: fastqs = lambda wildcards: [fql+'fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID), fql+'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else fql+'fastq_files/{}.fastq.gz'.format(wildcards.sampleID), index = config['DNTX_dir'] + 'data/salmon_indices/{subtissue}'
+        params: cmd = lambda wildcards: salmon_input(wildcards.sampleID, sample_dict, fql),\
+            outdir=lambda wildcards: 'results/salmon_quant/{}/{}'.format(wildcards.subtissue, wildcards.sampleID)
+        output: 'results/salmon_quant/{subtissue}/{sampleID}/quant.sf'
+        shell:
+            '''
+            id={wildcards.sampleID}
+            module load {salmon_version}
+            salmon quant -p 8 -i {input.index} -l A --gcBias --seqBias --numBootstraps 100 --validateMappings {params.cmd} -o {params.outdir}
+            '''
+    localrules: extract_mapping_rate
+    rule extract_mapping_rate:
+        input:
+            [f'results/salmon_quant/{sample_dict[sample]["ms_subtissue"]}/{sample}/quant.sf' for sample in sample_names]
+        output: 'results/mapping_rates.txt'
+        shell:
+            '''
+            for i in results/salmon_quant/*/*/quant.sf'; 
+                do echo "$i" | cut -f2 -d"/" | xargs printf ;
+                printf " "; 
+                grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
+            done > {output}
+            '''
+    
 else:
     rule re_run_Salmon:
         input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
@@ -277,57 +315,103 @@ else:
                 with open(log1,'w+') as logFile:
                     logFile.write('Sample {} failed to align'.format(id))
 
-rule process_poor_mapped_samples:
-    input: expand('logs/{sampleID}.rq.log',sampleID=sample_names)
-    output: 'ref/bad_mapping.txt'
-    shell:
-        '''
-        for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
-        '''
 
-localrules:extract_mapping_rate
-rule extract_mapping_rate:
-    input:
-        expand('RE_quant_files/{sampleID}/quant.sf', sampleID=sample_names)
-    output: 'results/mapping_rates.txt'
-    shell:
-        '''
-        for i in RE_quant_files/*/logs/salmon_quant.log; 
-            do echo "$i" | cut -f2 -d"/" | xargs printf ;
-            printf " "; 
-            grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
-        done > {output}
-        '''
 
-'''
-***** Produce files for eyeIntegration web app
-'''
-# load all salmon quant with with tximport (lengthScaledTPM)
-# run QSmooth normalization
-# remove genes with near 0 counts for all samples
-# remove samples with:
-# 	low counts
-#	normalize lengthScaled TPM by library size
-#	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
-rule gene_quantification_and_normalization:
-    input:
-        tpms=expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),
-        gtf='ref/gencodeAno_bsc.gtf',
-        bad_map='ref/bad_mapping.txt',
-        mapping_rate='results/mapping_rates.txt'
-    params:
-        working_dir = config['working_dir']
-    output:
-        counts = 'results/counts_{level}.csv.gz',
-        tpm = 'results/smoothed_filtered_tpms_{level}.csv',
-        removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
-        cor_scores = 'results/cor_scores_{level}.tsv',
-        batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
-    shell:
-        '''
-        module load R
-        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {input.mapping_rate} {output}
-        '''
+if config['multi_salmon_index'].upper() == 'YES':
+    
+    rule merge_gene_tx_quant:
+        input:            
+            tpms = [f'results/salmon_quant/{sample_dict[sample]["ms_subtissue"]}/{sample}/quant.sf' for sample in sample_names],
+            DNTX_gtf = config['DNTX_dir'] + 'data/gtfs/all_tissues.combined_NovelAno.gtf',
+            DNTX_track_file= config['DNTX_dir'] + 'data/misc/TCONS2MSTRG.tsv',
+        params: quant_path = 'results/salmon_quant/'
+        output:tx='results/tpms_gene.RDS', gene='results/tpms_transcript.RDS'
+        shell:
+            '''
+            module load {R_version}
+            Rscript {script_dir}/merge_ms_quant.R \
+                --workingDir {working_dir} \
+                --quantPath {params.quant_path} \
+                --trackFile {input.DNTX_track_file} \
+                --txTPMfile {output.tx} \
+                --geneTPMfile {output.gene}
+            '''
+    
+    rule gene_quantification_and_normalization:
+        input:
+            tpms = 'results/tpms_{level}.RDS',
+            gtf = 'ref/gencodeAno_bsc.gtf',
+            mapping_rate = 'results/mapping_rates.txt'
+        params:
+            working_dir = config['working_dir']
+        output:
+            tpm = 'results/smoothed_filtered_tpms_{level}.csv',
+            cor_scores = 'results/cor_scores_{level}.tsv',
+            batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
+        shell:
+            '''
+            module load R
+            Rscript {script_dir}/multi_salmon_QC.R \
+                --workingDir {working_dir} \
+                --refGtf {input.gtf} \
+                --level {wildcards.level} \
+                --mappingRates {input.mapping_rate} \
+                --smoothedTPMs {output.tpm} \
+                --fullCorTPMs {output.batchCor_tpm}
+            '''
+    
+
+else:
+    rule process_poor_mapped_samples:
+        input: expand('logs/{sampleID}.rq.log',sampleID=sample_names)
+        output: 'ref/bad_mapping.txt'
+        shell:
+            '''
+            for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
+            '''
+
+    localrules:extract_mapping_rate
+    rule extract_mapping_rate:
+        input:
+            expand('RE_quant_files/{sampleID}/quant.sf', sampleID=sample_names)
+        output: 'results/mapping_rates.txt'
+        shell:
+            '''
+        for sample in results/salmon_quant/*/*/aux_info/meta_info.json
+            do
+                echo $sample `grep num_processed $sample ` `grep percent_mapped $sample` 
+            done > {output}
+            '''
+
+    '''
+    ***** Produce files for eyeIntegration web app
+    '''
+    # load all salmon quant with with tximport (lengthScaledTPM)
+    # run QSmooth normalization
+    # remove genes with near 0 counts for all samples
+    # remove samples with:
+    # 	low counts
+    #	normalize lengthScaled TPM by library size
+    #	run tsne, cluster with DBScan, remove samples that are more than 4 SD from cluster center
+    rule gene_quantification_and_normalization:
+        input:
+            tpms=expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),
+            gtf='ref/gencodeAno_bsc.gtf',
+            bad_map='ref/bad_mapping.txt',
+            mapping_rate='results/mapping_rates.txt'
+        params:
+            working_dir = config['working_dir']
+        output:
+            counts = 'results/counts_{level}.csv.gz',
+            tpm = 'results/smoothed_filtered_tpms_{level}.csv',
+            removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
+            cor_scores = 'results/cor_scores_{level}.tsv',
+            batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
+        shell:
+            '''
+            module load R
+            Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {input.mapping_rate} {output}
+            '''
 
 # output sample metadata and gene/tx lists for eyeIntegration
 rule make_meta_info:
