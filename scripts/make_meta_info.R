@@ -10,10 +10,11 @@ gene_qc_file=args[4]
 tx_qc_file=args[5]
 samples_remove_gene=args[6]
 samples_remove_tx=args[7]
-mapping_rate <- read_delim(args[8], delim = ' ', col_names = F) %>%
-  mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
-  rename(sample_accession = X1, mapping_rate = X2) %>%
-  mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
+# mapping_rate <- read_delim(args[8], delim = ' ', col_names = F) %>%
+#   mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
+#   rename(sample_accession = X1, mapping_rate = X2) %>%
+#   mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
+mapping_rate <- args[8]
 setwd(args[9])
 metadata_file <- args[10]
 tx_file <- args[11]
@@ -23,6 +24,18 @@ script_dir <- args[14]
 
 sample_design <- read_tsv(sample_metadata)
 colnames(sample_design)[1] <- 'sample_accession'
+
+read_mapping_rate <- function(file){
+    df_messy <- read.delim(file, sep = ' ', header = F) 
+    sample <- df_messy$V1 %>% as.character %>%  str_split('/') %>% 
+        sapply( function (x){idx=(which(grepl('aux_info', x)) -1);return(x[idx])} )
+    total_reads <-  df_messy$V3 %>% str_split(',') %>% sapply(function(x)x[1]) %>% as.numeric 
+    percent_mapped <- df_messy$V5 %>% str_split(',') %>% sapply(function(x)x[1]) %>% as.numeric %>% {./100}
+    df <- tibble(sample_accession=sample, mapping_rate=percent_mapped)
+    return(df)
+mapping_rate=read_mapping_rate(mapping_rate_file)
+
+
 #colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','Tissue','Sub_Tissue','Origin')
 sra_con <- dbConnect(RSQLite::SQLite(),sql_file)
 sra_query <- "SELECT * FROM sra WHERE sample_accession='BLANK'"

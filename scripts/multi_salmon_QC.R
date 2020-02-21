@@ -10,12 +10,14 @@ args=commandArgs(trailingOnly = T)
 parser <- ArgumentParser()
 parser$add_argument('--workingDir', action = 'store', dest = 'working_dir')
 parser$add_argument('--sampleTable', action = 'store', dest = 'sample_metadata_file')
+parser$add_argument('--countsFile', action = 'store', dest = 'counts_file')
 parser$add_argument('--refGtf', action = 'store', dest = 'gtf_file')
 parser$add_argument('--level', action = 'store', dest = 'level')
 parser$add_argument('--mappingRates', action = 'store', dest = 'mapping_rate_file')
 parser$add_argument('--smoothedTPMs', action = 'store', dest = 'output_file')
 parser$add_argument('--fullCorTPMs',action = 'store', dest = 'fullCor_output_file')
 list2env(parser$parse_args(), .GlobalEnv)
+save.image('testing/msqc.args.Rdata')
 #working_dir='/data/swamyvs/autoRNAseq'
 # sample_metadata_file='sampleTable_2020_02_18_multi_salmon.tsv'
 # dntx_gtf_file= '/data/swamyvs/ocular_transcriptomes_pipeline/data/gtfs/all_tissues.combined_NovelAno.gtf'
@@ -46,9 +48,11 @@ gtf <- rtracklayer::readGFF(gtf_file) %>% dplyr::filter(type=='transcript') %>% 
 anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type")]
 #colnames(sample_design) <- c('sample_accession', 'run_accession', 'paired','tissue','Sub_Tissue','origin')
 sample_design <- read_tsv(sample_metadata_file) %>% rename(sample_accession=`#sample_accession`)
-tpm_df <- readRDS(counts_file)
-tpms <- tpm_df %>% select(-transcript_id) %>% as.matrix
-rownames(tpms) <- tpm_df$transcript_id
+tpm_df <- readRDS(counts_file) 
+id_name=ifelse(level == 'gene', 'gene_name', 'transcript_id')
+tpm_df <- tpm_df %>% rename(ID = !!id_name)
+tpms <- tpm_df %>% select(-ID ) %>% as.matrix
+rownames(tpms) <- tpm_df$ID
 mapping_rate <- process_lib_size_tabs(mapping_rate_file)
 sample_design <- left_join(sample_design, mapping_rate, by = 'sample_accession') %>% 
     filter(sample_accession %in% colnames(tpms))

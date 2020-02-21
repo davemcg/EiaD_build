@@ -75,9 +75,10 @@ badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
 fql=config['fastq_path']
 working_dir=config['working_dir']
+R_version=config['R_version']
 rule all:
     input:
-        expand('results/counts_{level}.csv.gz', level = ['gene', 'transcript']),
+        #expand('results/counts_{level}.csv.gz', level = ['gene', 'transcript']),
         'ref/salmonindexTrimmed',
         'results/word_clouds',
         config['EiaD_sqlite_file']
@@ -267,7 +268,7 @@ elif config['multi_salmon_index'].upper() == 'YES':
             '''
             id={wildcards.sampleID}
             module load {salmon_version}
-            salmon quant -p 8 -i {input.index} -l A --gcBias --seqBias --numBootstraps 100 --validateMappings {params.cmd} -o {params.outdir}
+            salmon quant -p 8 -i {input.index} -l A --gcBias --seqBias --validateMappings {params.cmd} -o {params.outdir}
             '''
     localrules: extract_mapping_rate
     rule extract_mapping_rate:
@@ -275,11 +276,10 @@ elif config['multi_salmon_index'].upper() == 'YES':
             [f'results/salmon_quant/{sample_dict[sample]["ms_subtissue"]}/{sample}/quant.sf' for sample in sample_names]
         output: 'results/mapping_rates.txt'
         shell:
-            '''
-            for i in results/salmon_quant/*/*/quant.sf'; 
-                do echo "$i" | cut -f2 -d"/" | xargs printf ;
-                printf " "; 
-                grep "Mapping rate" $i | tail -n 1 | awk '{{print $NF}}'; 
+            '''            
+            for sample in results/salmon_quant/*/*/aux_info/meta_info.json
+            do
+                echo $sample `grep num_processed $sample ` `grep percent_mapped $sample` 
             done > {output}
             '''
     
@@ -331,6 +331,8 @@ if config['multi_salmon_index'].upper() == 'YES':
             module load {R_version}
             Rscript {script_dir}/merge_ms_quant.R \
                 --workingDir {working_dir} \
+                --sampleMetadata {sampleFile} \
+                --dntxGtf {input.DNTX_gtf} \
                 --quantPath {params.quant_path} \
                 --trackFile {input.DNTX_track_file} \
                 --txTPMfile {output.tx} \
@@ -339,7 +341,7 @@ if config['multi_salmon_index'].upper() == 'YES':
     
     rule gene_quantification_and_normalization:
         input:
-            tpms = 'results/tpms_{level}.RDS',
+            tpm = 'results/tpms_{level}.RDS',
             gtf = 'ref/gencodeAno_bsc.gtf',
             mapping_rate = 'results/mapping_rates.txt'
         params:
@@ -347,18 +349,23 @@ if config['multi_salmon_index'].upper() == 'YES':
         output:
             tpm = 'results/smoothed_filtered_tpms_{level}.csv',
             cor_scores = 'results/cor_scores_{level}.tsv',
-            batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
+            batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv',
+            rm_file = 'results/samples_removed_by_QC_{level}.tsv'
         shell:
             '''
             module load R
             Rscript {script_dir}/multi_salmon_QC.R \
                 --workingDir {working_dir} \
                 --refGtf {input.gtf} \
+                --countsFile {input.tpm} \
+                --sampleTable {sampleFile} \
                 --level {wildcards.level} \
                 --mappingRates {input.mapping_rate} \
                 --smoothedTPMs {output.tpm} \
                 --fullCorTPMs {output.batchCor_tpm}
+            touch {output.rm_file}
             '''
+    
     
 
 else:
@@ -377,7 +384,7 @@ else:
         output: 'results/mapping_rates.txt'
         shell:
             '''
-        for sample in results/salmon_quant/*/*/aux_info/meta_info.json
+            for sample in RE_quant_files/*/aux_info/meta_info.json
             do
                 echo $sample `grep num_processed $sample ` `grep percent_mapped $sample` 
             done > {output}
@@ -413,7 +420,7 @@ else:
             Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {input.mapping_rate} {output}
             '''
 
-# output sample metadata and gene/tx lists for eyeIntegration
+    # output sample metadata and gene/tx lists for eyeIntegration
 rule make_meta_info:
     input:
         expand('results/smoothed_filtered_tpms_{level}.csv',level = ['gene','transcript']),
@@ -430,13 +437,13 @@ rule make_meta_info:
         '''
         module load R
         Rscript {config[scripts_dir]}/make_meta_info.R \
-          {config[sampleFile]} \
-          {ref_GTF_basic} \
-          {config[sqlfile]} \
-          {input} \
-          {params.working_dir} \
-          {output} \
-          {config[scripts_dir]}
+        {config[sampleFile]} \
+        {ref_GTF_basic} \
+        {config[sqlfile]} \
+        {input} \
+        {params.working_dir} \
+        {output} \
+        {config[scripts_dir]}
         '''
 
 rule differential_expression:

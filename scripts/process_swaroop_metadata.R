@@ -28,3 +28,12 @@ write_tsv(complete_metadata, 'ref/complete_swaroop_metadata_sraAdded.tsv')
 metadata_trimmed <- complete_metadata %>% select(sample, run, paired, tissue, subtissue, origin, Age_Days, Source)
 write_tsv(metadata_trimmed, 'ref/sampleTable_swaroopAMD_formatted.tsv')
 
+
+SRA_search <- read_tsv('~/Downloads/SraRunTable.txt')
+search_by_study <- SRA_search %>% group_by(SRA_Study) %>% summarise(n_samples=length(SRA_Sample), n_run=length(Run))
+full_xml <- read_xml('~/Downloads/SraExperimentPackage.xml') %>% as_list()
+k <- full_xml$EXPERIMENT_PACKAGE_SET
+i <- lapply(k, function(x) unlist(x, recursive = T))
+k <- lapply(i, names) %>% reduce(intersect)
+res <-lapply(i, function(x) x[k]) %>%   do.call(rbind,.) %>% as.data.frame()
+

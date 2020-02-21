@@ -1,3 +1,4 @@
+#!/
 library(tximport)
 library(tidyverse)
 # sonnesson 2016 inspired ID of low-usage tx
@@ -30,6 +31,7 @@ tx_c <- tx_c[,samples_to_keep] %>%
     select(transcript_id, everything()) %>%
     left_join(anno, .) %>%
     arrange(gene_name)# 1 is corresponds to the trancript_id column
+print(ncol(tx_c))
 # get gene name added
 
 #  sum counts by gene for all samples and calculate tx usage ratio
@@ -41,8 +43,9 @@ gene_sums <- summarizeToGene(txi,tx2gene = anno) %>%
     select(gene_name, gene_sums) %>%
     arrange(gene_name)
 gene_sums_tx <-left_join(gene_sums, tx_c)
-tx_c <- dplyr::arrange(tx_c,gene_name)
-all_ratios <- gene_sums_tx %>% select(-transcript_id, -gene_name, -gene_sums) %>% {. / gene_sums_tx$gene_sums}
+all_ratios <- gene_sums_tx %>%
+    select(-transcript_id, -gene_name, -gene_sums) %>%
+    {. / gene_sums_tx$gene_sums}
 all_ratios[is.nan(as.matrix(all_ratios))] <- 0
 # find number of samples for each transcripts which are < 5% of the total
 low_usage <- which(rowSums(all_ratios)<=.05)

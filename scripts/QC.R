@@ -33,10 +33,20 @@ anno <- gtf[,c("gene_id", "gene_name", "transcript_id", "gene_type")]
 removal_log=data.frame()
 
 
-mapping_rate <- read_delim(mapping_rate_file, delim = ' ', col_names = F) %>%
-  mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
-  rename(sample_accession = X1, mapping_rate = X2) %>%
-  mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
+# mapping_rate <- read_delim(mapping_rate_file, delim = ' ', col_names = F) %>%
+#   mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
+#   rename(sample_accession = X1, mapping_rate = X2) %>%
+#   mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
+read_mapping_rate <- function(file){
+    df_messy <- read.delim(file, sep = ' ', header = F) 
+    sample <- df_messy$V1 %>% as.character %>%  str_split('/') %>% 
+        sapply( function (x){idx=(which(grepl('aux_info', x)) -1);return(x[idx])} )
+    total_reads <-  df_messy$V3 %>% str_split(',') %>% sapply(function(x)x[1]) %>% as.numeric 
+    percent_mapped <- df_messy$V5 %>% str_split(',') %>% sapply(function(x)x[1]) %>% as.numeric %>% {./100}
+    df <- tibble(sample_accession=sample, mapping_rate=percent_mapped)
+    return(df)
+mapping_rate=read_mapping_rate(mapping_rate_file)
+
 
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
 samplenames <- strsplit(files0,'/' )%>% sapply(function(x) x[2])

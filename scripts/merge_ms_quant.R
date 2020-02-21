@@ -4,18 +4,20 @@ library(argparse)
 parser <- ArgumentParser()
 parser$add_argument('--workingDir', action = 'store', dest = 'working_dir')
 parser$add_argument('--quantPath', action = 'store', dest = 'quant_path')
+parser$add_argument('--dntxGtf', action  = 'store', dest = 'dntx_gtf_file')
 parser$add_argument('--trackFile', action = 'store', dest = 'track_file')
 parser$add_argument('--sampleMetadata', action = 'store', dest = 'sample_metadata_file')
 parser$add_argument('--txTPMfile', action = 'store', dest = 'tx_tpm_file')
 parser$add_argument('--geneTPMfile', action = 'store', dest = 'gene_tpm_file')
 list2env(parser$parse_args(), .GlobalEnv)
-
+save.image('testing/mergemsq_args.Rdata')
 read_salmon <- function(path){
     print(path)
     qfiles <- list.files(path,pattern='quant.sf', recursive=T, full.names = T)
     name_idx <- str_split(qfiles[1], '/')[[1]] %>% grep('quant.sf', .) %>% {. -1}
     names <- str_split(qfiles,'/') %>% sapply(function(x) x[name_idx])
-    txi <- tximport::tximport(files = qfiles, type = 'salmon', txOut = T, countsFromAbundance = 'lengthScaledTPM')
+    txi <- tximport::tximport(files = qfiles, type = 'salmon', txOut = T, 
+                              countsFromAbundance = 'lengthScaledTPM', dropInfReps=T)
     colnames(txi$counts) <- names
     colnames(txi$abundance) <- names
     return(txi)
@@ -54,6 +56,7 @@ tpms_tx <- lapply(seq_along(ms_subtissues), function(i) proc_tx_quant(ms_subtiss
     reduce(full_join)
 tpms_gene <- lapply(seq_along(ms_subtissues), function(i) proc_gene_quant(ms_subtissues[i], all_quant[[i]])) %>% 
     reduce(full_join)
+
 tpms_tx[is.na(tpms_tx)]<-0
 tpms_gene[is.na(tpms_gene)] <- 0
 saveRDS(tpms_tx, tx_tpm_file)
