@@ -125,11 +125,14 @@ rule aggregate_fastqs:
             fileParts=lookupRunfromID(fastqPart_path, id,sample_dict)
             i='1' if '_' in id and id[-1]=='1' else '2'# which strand
             id=id[:-2] if '_' in id else id
+            if sample_dict[id]['paired']:
+                    outfile = f'{fastq_file_path}/fastq_files/{id}_{i}.fastq'
+            else:
+                outfile = f'{fastq_file_path}/fastq_files/{id}.fastq'
             for fqp in fileParts:
-                if sample_dict[id]['paired']:
-                    sp.run(f'cat {fqp} >> {fastq_file_path}/fastq_files/{id}_{i}.fastq.gz ', shell=True)
-                else:
-                    sp.run(f'cat {fqp} >> {fastq_file_path}/fastq_files/{id}.fastq.gz',shell=True)
+                sp.run(f'zcat {fqp} >> {outfile}',shell=True)
+            sp.run(f'gzip {outfile}', shell=True)
+            
 
 
 
@@ -254,7 +257,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
 # going to alter to the salon index much
 else:
     rule re_run_Salmon:
-        input: lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz',
+        input: lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_2.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz',
             config['salmon_index_path']
         output:'RE_quant_files/{sampleID}/quant.sf'
         threads: 4
