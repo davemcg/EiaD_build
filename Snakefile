@@ -15,11 +15,12 @@ Things to do
 '''
 import subprocess as sp
 import itertools as it
-
+import re
 def readSampleFile(samplefile):
     # returns a dictionary of dictionaries where first dict key is sample id and second dict key are sample  properties
     res={}
     with open(samplefile) as file:
+        file.readline()
         for line in file:
             if line[0] == '#':
                 continue
@@ -27,33 +28,36 @@ def readSampleFile(samplefile):
             res[info[0]]={'files':info[1].split(','),'paired':True if info[2]=='y' else False, 'tissue':info[3],'subtissue':info[4]}
     return(res)
 
-def lookupRunfromID(card,sample_dict):
+def lookupRunfromID(path, card,sample_dict):
     id=card
     if 'BLOOP_E-MTAB' in card: #not the best but it works
         return('bam_files/{}.bam'.format(id[:-2]))
     else:
-        if '_' in id:
-            i= '1' if id[-1]=='1' else '2'# check L/R file
-            id=card[:-2]
-        fqpfiles=sample_dict[id]['files']
         res=[]
-        for file in fqpfiles:
-            if sample_dict[id]['paired']:
-                #PE
-                res.append('fastqParts/{}_{}.fastq.gz'.format(file,i))
-            else:
-                #SE
-                res.append('fastqParts/{}.fastq.gz'.format(file))
+        if re.search('_\d$', id) is not None:
+            i= id[-1]# check L/R file
+            id=card[:-2]
+            fqpfiles=sample_dict[id]['files']
+            for file in fqpfiles:
+                if sample_dict[id]['paired']:
+                    #PE
+                    res.append(f'{path}/fastqParts/{file}_{i}.fastq.gz')
+        else:
+            fqpfiles=sample_dict[id]['files']
+            for file in fqpfiles:
+                res.append(f'{path}/fastqParts/{file}.fastq.gz')
     return(res)
 
 #configfile:'config.yaml'
 sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,metadata}
 sample_names=sample_dict.keys()
+fastqPart_path=config['fastqPart_path']
+fastq_file_path=config['fastq_file_path']
 
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
 loadSalmon= "module load {} && ".format(config['salmon_version'])
-salmonindex='ref/salmonindex'
-salmonindex_trimmed='ref/salmonindex_trimmed'
+salmonindex=config['raw_salmon_index']
+salmonindex_trimmed=config['salmon_index_path']
 STARindex='ref/STARindex'
 ref_fasta='ref/gencodeRef.fa'
 #ref_GTF='ref/gencodeAno.gtf'
@@ -66,8 +70,8 @@ ref_trimmed='ref/gencodeRef_trimmed.fa'
 rule all:
     input:
         expand('results/counts_{level}.csv.gz', level = ['gene', 'transcript']),
-        'ref/salmonindexTrimmed',
-        'results/word_clouds',
+        salmonindex_trimmed,
+        directory('results/word_clouds'),
         config['EiaD_sqlite_file']
 '''
 ****PART 1**** download files
@@ -102,30 +106,33 @@ if config['download_fastq'].upper() == 'YES':
 
 # combine multiple fastq files together
 rule aggregate_fastqs:
-    input:ancient(lambda wildcards:lookupRunfromID(wildcards.sampleID,sample_dict))
-    output:'fastq_files/{sampleID}.fastq.gz'
+    input:ancient(lambda wildcards:lookupRunfromID(fastqPart_path, wildcards.sampleID,sample_dict))
+    output:fastq_file_path +'/fastq_files/{sampleID}.fastq.gz'
     run:
         #this can use some cleaning up - rule runs twice for paired
         id=wildcards.sampleID
         if '.bam' in input[0]:
             id=wildcards.sampleID[:-2]
             #need to collate a bam before you can convert, otherwise will lose many reads
-            cmd='module load samtools &&  samtools collate -O {} | \
-            samtools fastq -1 fastq_files/{}_1.fastq -2 fastq_files/{}_2.fastq -0 /dev/null -s /dev/null -n -F 0x900 -'.format(input[0],id,id)
+            cmd=f'module load samtools &&  samtools collate -O {input[0]} | \
+            samtools fastq -1 {fastq_file_path}/fastq_files/{id}_1.fastq -2 {fastq_file_path}/fastq_files/{id}_2.fastq -0 /dev/null -s /dev/null -n -F 0x900 -'
             sp.run(cmd,shell=True)
-            gunzip=' gunzip -c -f fastq_files/{}_1.fastq > fastq_files/{}_1.fastq.gz'.format(id,id)
+            gunzip=f' gunzip -c -f {fastq_file_path}/fastq_files/{id}_1.fastq > fastq_files/{id}_1.fastq.gz'
             sp.run(gunzip,shell=True)
-            gunzip=' gunzip -c -f fastq_files/{}_2.fastq > fastq_files/{}_2.fastq.gz'.format(id, id)
+            gunzip=f' gunzip -c -f {fastq_file_path}/fastq_files/{id}_2.fastq > fastq_files/{id}_2.fastq.gz'
             sp.run(gunzip,shell=True)
         else:
-            fileParts=lookupRunfromID(id,sample_dict)
+            fileParts=lookupRunfromID(fastqPart_path, id,sample_dict)
             i='1' if '_' in id and id[-1]=='1' else '2'# which strand
             id=id[:-2] if '_' in id else id
             for fqp in fileParts:
                 if sample_dict[id]['paired']:
-                    sp.run('cat {fqp} >> fastq_files/{id}_{i}.fastq.gz '.format(fqp=fqp,i=i,id=id),shell=True)
+                    sp.run(f'cat {fqp} >> {fastq_file_path}/fastq_files/{id}_{i}.fastq.gz ', shell=True)
                 else:
-                    sp.run('cat {fqp} >> fastq_files/{id}.fastq.gz'.format(fqp=fqp,id=id),shell=True)
+                    sp.run(f'cat {fqp} >> {fastq_file_path}/fastq_files/{id}.fastq.gz',shell=True)
+
+
+
 
 # if set to yes in config.yaml, then salmon will be run twice
 # after the first salmon run all transcripts across all samples
@@ -138,7 +145,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
     '''
     rule build_salmon_index:
         input:  ref_fasta
-        output:'ref/salmonindex'
+        output:salmonindex_trimmed
         run:
             salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
             sp.run(salmonindexcommand, shell=True)
@@ -146,7 +153,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
 
 
     rule run_salmon:
-        input: ancient(lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID)),
+        input: ancient(lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz'),
             'ref/salmonindex'
         output: 'quant_files/{sampleID}/quant.sf'
         log: 'logs/{sampleID}.log'
@@ -202,15 +209,15 @@ if config['build_new_salmon_index'].upper() == 'YES':
 
     rule rebuild_salmon_index:
         input:'ref/gencodeRef_trimmed.fa'
-        output:'ref/salmonindexTrimmed'
+        output:salmonindex_trimmed
         run:
             salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
             sp.run(salmonindexcommand, shell=True)
 
 
     rule re_run_Salmon:
-        input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
-            'ref/salmonindexTrimmed'
+        input: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz',
+            salmonindex_trimmed
         output:'RE_quant_files/{sampleID}/quant.sf'
         threads: 4
         log: 'logs/{sampleID}.rq.log'
@@ -247,7 +254,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
 # going to alter to the salon index much
 else:
     rule re_run_Salmon:
-        input: lambda wildcards: ['fastq_files/{}_1.fastq.gz'.format(wildcards.sampleID),'fastq_files/{}_2.fastq.gz'.format(wildcards.sampleID)] if sample_dict[wildcards.sampleID]['paired'] else 'fastq_files/{}.fastq.gz'.format(wildcards.sampleID),
+        input: lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz',
             config['salmon_index_path']
         output:'RE_quant_files/{sampleID}/quant.sf'
         threads: 4
@@ -453,7 +460,7 @@ rule make_word_clouds:
     input:
         'results/all_vs_all_GO.Rdata'
     output:
-        'results/word_clouds'
+        directory('results/word_clouds')
     params:
         working_dir = config['working_dir']
     shell:
