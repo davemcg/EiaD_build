@@ -6,7 +6,7 @@ library(dbscan)
 library(edgeR)
 args=commandArgs(trailingOnly = T)
 #args=c('sampleTable1218_tissues.tab','ref/gencodeAno_bsc.gtf','/data/swamyvs/autoRNAseq','transcript','testQC.tsv','ref/bad_mapping.txt')
-
+save(args, file = 'testing/qc_Args.R')
 
 sample_metadata = args[1]
 gtf_file = args[2]
@@ -36,7 +36,7 @@ removal_log=data.frame()
 mapping_rate <- read_delim(mapping_rate_file, delim = ' ', col_names = F) %>%
   mutate(X2 = gsub('%', '', X2) %>% as.numeric()) %>%
   rename(sample_accession = X1, mapping_rate = X2) %>%
-  mutate(mapping_rate = case_when(is.na(mapping_rate) ~ 0))
+  mutate(mapping_rate = replace_na(mapping_rate, 0))
 
 files0 <-paste0('RE_quant_files/',sample_design$sample_accession, '/quant.sf')
 samplenames <- strsplit(files0,'/' )%>% sapply(function(x) x[2])
@@ -116,7 +116,7 @@ colnames(lsTPM_librarySize) <- colnames(tpms)
 
 #quantile normalize samples
 sample_design <- sample_design %>% filter(sample_accession  %in% colnames(lsTPM_librarySize))
-qs <- qsmooth(object = lsTPM_librarySize,group_factor = as.factor(sample_design$Tissue))
+qs <- qsmooth(object = lsTPM_librarySize,groupFactor = as.factor(sample_design$Tissue))
 lstpms_smoothed <- as.data.frame(qsmoothData(qs))
 
 colnames(lstpms_smoothed) <- colnames(lsTPM_librarySize)
@@ -162,8 +162,11 @@ TPM <- TPM %>% data.frame()
 colnames(TPM) <- colnames(tpms_smoothed_filtered)
 variance <- apply(TPM, 1, var, na.rm=TRUE)
 TPM$variance <- variance
-high_var_TPM <- TPM %>% arrange(variance) %>% tail(3000) %>% select(-variance)
+high_var_TPM <- TPM %>% arrange(variance) %>% tail(3000) %>% select(-variance) %>% as_tibble
 cor_outlier_identification <- function(df){
+    if( length(df) == 0 |nrow(df) < 3){
+        return('')
+    }
     cor_mat <- cor(df, method = 'spearman')# pairwise cor
     avg_cor <- rowMeans(cor_mat)#avg cor per sapmle
     grand_cor <- mean(avg_cor)# global avg cor
@@ -173,9 +176,11 @@ cor_outlier_identification <- function(df){
     names(D) <- colnames(df)
     D
 }
-
-scores <- lapply(unique(sample_design$Sub_Tissue), function(x) filter(sample_design, Sub_Tissue == x) %>% 
-                     pull(sample_accession) %>% high_var_TPM[,.] %>% cor_outlier_identification ) %>% do.call (c,.)
+sample_design = sample_design %>% filter(sample_accession %in% colnames(TPM))
+scores <- lapply(unique(sample_design$Sub_Tissue), function(x) {
+    print(x)
+    filter(sample_design, Sub_Tissue == x) %>% 
+                     pull(sample_accession) %>% high_var_TPM[,.] %>% cor_outlier_identification }) %>% do.call (c,.)
 
 low_cor <- scores < -17.5
 

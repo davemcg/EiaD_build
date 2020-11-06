@@ -53,7 +53,7 @@ sample_dict=readSampleFile(config['sampleFile'])# sampleID:dict{path,paired,meta
 sample_names=sample_dict.keys()
 fastqPart_path=config['fastqPart_path']
 fastq_file_path=config['fastq_file_path']
-
+R_version='R/3.5.0'
 loadSRAtk="module load {} && ".format(config['sratoolkit_version'])
 loadSalmon= "module load {} && ".format(config['salmon_version'])
 salmonindex=config['raw_salmon_index']
@@ -192,7 +192,7 @@ if config['build_new_salmon_index'].upper() == 'YES':
         output:'tx_for_removal.txt'
         shell:
             '''
-            module load R
+            module load {R_version}
             Rscript {config[scripts_dir]}/soneson_low_usage.R {config[working_dir]} {ref_GTF_basic}
             '''
 
@@ -335,7 +335,7 @@ rule gene_quantification_and_normalization:
         batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
     shell:
         '''
-        module load R
+        module load {R_version}
         Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {input.mapping_rate} {output}
         '''
 
@@ -354,7 +354,7 @@ rule make_meta_info:
         gene_tx_info = 'results/gene_tx_gtf_info.Rdata'
     shell:
         '''
-        module load R
+        module load {R_version}
         Rscript {config[scripts_dir]}/make_meta_info.R \
           {config[sampleFile]} \
           {ref_GTF_basic} \
@@ -377,7 +377,7 @@ rule differential_expression:
         list_of_dataframes = 'results/limma_DE_listDF_{level}.Rdata'
     shell:
         '''
-        module load R
+        module load {R_version}
         Rscript {config[scripts_dir]}/diffExp.R {params.working_dir} {config[sampleFile]} {input} {output}
         '''
 
@@ -392,7 +392,7 @@ rule calculate_mean_rank_decile:
         'results/mean_rank_decile_{level}.tsv'
     shell:
         '''
-        module load R
+        module load {R_version}
         Rscript {config[scripts_dir]}/calculate_mean_rank_decile.R \
           {params.working_dir} \
           {input.lsTPM_file} \
@@ -413,7 +413,7 @@ rule differential_gene_lists:
         all_genes = 'results/all_genes.Rdata'
     shell:
         '''
-        module load R
+        module load {R_version}
         Rscript {config[scripts_dir]}/find_diff_expressed_gene_lists.R \
           {params.working_dir} \
           {input} \
@@ -431,7 +431,7 @@ rule GO_term_enrichment:
         all_vs_all_go = 'results/all_vs_all_GO.Rdata'
     shell:
        '''
-       module load R
+       module load {R_version}
        Rscript {config[scripts_dir]}/calculate_GO_enrichment.R \
          {params.working_dir} \
          {threads} \
@@ -451,7 +451,7 @@ rule tSNE:
         'results/tSNE_coords.Rdata'
     shell:
         '''
-        module load R
+        module load {R_version}
         Rscript {config[scripts_dir]}/calculate_tsne_5_to_50.R \
           {params.working_dir} \
           {input} \
@@ -494,7 +494,7 @@ rule make_SQLite_db:
         config['EiaD_sqlite_file']
     shell:
        '''
-       module load R
+       module load {R_version}
        Rscript {config[scripts_dir]}/make_sqlite_db.R \
          {params.working_dir} \
          {input} \

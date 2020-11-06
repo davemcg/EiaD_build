@@ -7,7 +7,7 @@ library(qsmooth)
 library(readr)
 library(tidyverse)
 args=commandArgs(trailingOnly = T)
-
+save(args, file = 'testing/diffexp_args.Rdata')
 setwd(args[1])
 sample_table <- read_tsv(args[2])
 colnames(sample_table)[1] <- 'sample_accession'
