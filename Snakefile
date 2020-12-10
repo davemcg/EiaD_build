@@ -66,10 +66,9 @@ ref_GTF_basic='ref/gencodeAno_bsc.gtf'
 #eref_PA='ref/gencodePA.fa'
 badruns='badruns'
 ref_trimmed='ref/gencodeRef_trimmed.fa'
-
+salmon_version = config['salmon_version']
 rule all:
     input:
-        expand('results/counts_{level}.csv.gz', level = ['gene', 'transcript']),
         salmonindex_trimmed,
         directory('results/word_clouds'),
         config['EiaD_sqlite_file']
@@ -148,16 +147,17 @@ if config['build_new_salmon_index'].upper() == 'YES':
     '''
     rule build_salmon_index:
         input:  ref_fasta
-        output:salmonindex_trimmed
-        run:
-            salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
-            sp.run(salmonindexcommand, shell=True)
-
+        output: directory(config['raw_salmon_index'])
+        shell:
+            '''
+            module load {salmon_version}
+            salmon index --gencode -t {input} -i {output} 
+            '''
 
 
     rule run_salmon:
-        input: ancient(lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz'),
-            'ref/salmonindex'
+        input: ancient(lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_2.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz'),
+            config['raw_salmon_index']
         output: 'quant_files/{sampleID}/quant.sf'
         log: 'logs/{sampleID}.log'
         run:
@@ -212,14 +212,16 @@ if config['build_new_salmon_index'].upper() == 'YES':
 
     rule rebuild_salmon_index:
         input:'ref/gencodeRef_trimmed.fa'
-        output:salmonindex_trimmed
-        run:
-            salmonindexcommand=loadSalmon + 'salmon index -t {} --gencode -i {} --type quasi --perfectHash -k 31'.format(input[0],output[0])
-            sp.run(salmonindexcommand, shell=True)
+        output: directory(salmonindex_trimmed)
+        shell:
+            '''
+            module load {salmon_version}
+            salmon index --gencode -t {input} -i {output} 
+            '''
 
 
     rule re_run_Salmon:
-        input: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz',
+        input: lambda wildcards: [f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_1.fastq.gz',f'{fastq_file_path}/fastq_files/{wildcards.sampleID}_2.fastq.gz'] if sample_dict[wildcards.sampleID]['paired'] else f'{fastq_file_path}/fastq_files/{wildcards.sampleID}.fastq.gz',
             salmonindex_trimmed
         output:'RE_quant_files/{sampleID}/quant.sf'
         threads: 4
@@ -295,6 +297,8 @@ rule process_poor_mapped_samples:
         for i in logs/*.rq.log; do cat $i && echo  ; done | grep failed - > {output}
         '''
 
+working_dir = config['working_dir']
+
 localrules:extract_mapping_rate
 rule extract_mapping_rate:
     input:
@@ -302,6 +306,7 @@ rule extract_mapping_rate:
     output: 'results/mapping_rates.txt'
     shell:
         '''
+        cd {working_dir}
         for i in RE_quant_files/*/logs/salmon_quant.log; 
             do echo "$i" | cut -f2 -d"/" | xargs printf ;
             printf " "; 
@@ -328,21 +333,39 @@ rule gene_quantification_and_normalization:
     params:
         working_dir = config['working_dir']
     output:
-        counts = 'results/counts_{level}.csv.gz',
-        tpm = 'results/smoothed_filtered_tpms_{level}.csv',
-        removed_samples = 'results/samples_removed_by_QC_{level}.tsv',
-        cor_scores = 'results/cor_scores_{level}.tsv',
-        batchCor_tpm = 'results/smoothed_filtered_tpms_batchCor_{level}.csv'
+        raw_counts = 'results/raw_counts_gene.csv',
+        removed_samples = 'results/samples_removed_by_QC_gene.tsv',
+        cor_scores = 'results/cor_scores_gene.tsv',
+        raw_tpm = 'results/raw_tpm_gene.csv'
     shell:
         '''
         module load {R_version}
-        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} {wildcards.level} {input.bad_map} {input.mapping_rate} {output}
+        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} gene {input.bad_map} {input.mapping_rate} {output}
         '''
 
+rule transcript_quantification_and_normalization:
+    input:
+        removed_samples = 'results/samples_removed_by_QC_gene.tsv',
+        tpms=expand('RE_quant_files/{sampleID}/quant.sf',sampleID=sample_names),
+        gtf='ref/gencodeAno_bsc.gtf',
+        bad_map='ref/bad_mapping.txt',
+        mapping_rate='results/mapping_rates.txt'
+    params:
+        working_dir = config['working_dir']
+    output:
+        raw_counts = 'results/raw_counts_transcript.csv',
+        removed_samples = 'results/samples_removed_by_QC_transcript.tsv',
+        cor_scores = 'results/cor_scores_transcript.tsv',
+        raw_tpm = 'results/raw_tpm_transcript.csv'        
+    shell:
+        '''
+        module load {R_version}
+        Rscript {config[scripts_dir]}/QC.R {config[sampleFile]} {ref_GTF_basic} {params.working_dir} transcript {input.bad_map} {input.mapping_rate} {output} {input.removed_samples}
+        '''
 # output sample metadata and gene/tx lists for eyeIntegration
 rule make_meta_info:
     input:
-        expand('results/smoothed_filtered_tpms_{level}.csv',level = ['gene','transcript']),
+        expand('results/raw_tpm_{level}.csv',level = ['gene','transcript']),
         expand('results/samples_removed_by_QC_{level}.tsv', level = ['gene','transcript']),
         'results/mapping_rates.txt'
     params:
@@ -367,7 +390,7 @@ rule make_meta_info:
 
 rule differential_expression:
     input: 
-        'results/smoothed_filtered_tpms_{level}.csv',
+        'results/raw_counts_{level}.csv',
         'results/core_tight.Rdata'
     params:
         working_dir = config['working_dir'], #'/data/swamyvs/autoRNAseq'
@@ -384,7 +407,7 @@ rule differential_expression:
 # for each gene/TX, by sub_tissue, calculate mean expression, rank, and decile
 rule calculate_mean_rank_decile:
     input:
-        lsTPM_file = 'results/smoothed_filtered_tpms_batchCor_{level}.csv',
+        lsTPM_file = 'results/raw_tpm_{level}.csv',
         metadata_file = 'results/core_tight.Rdata',
     params:
         working_dir = config['working_dir']
@@ -443,7 +466,7 @@ rule GO_term_enrichment:
 rule tSNE:
     input:
         metadata = 'results/core_tight.Rdata',
-        tpm = 'results/smoothed_filtered_tpms_batchCor_gene.csv',
+        tpm = 'results/raw_tpm_gene.csv',
         gtf = 'results/gene_tx_gtf_info.Rdata'
     params:
         working_dir = config['working_dir']
@@ -479,7 +502,7 @@ rule make_word_clouds:
 # create SQLite expression db
 rule make_SQLite_db:
     input:
-        tpms = expand('results/smoothed_filtered_tpms_batchCor_{level}.csv', level = ['gene', 'transcript']),
+        tpms = expand('results/raw_tpm_{level}.csv', level = ['gene', 'transcript']),
         tx_names = 'results/tx_names.Rdata',
         DE = expand('results/limma_DE_listDF_{level}.Rdata', level = ['gene', 'transcript']),
         DE_tests = 'results/de_comparison_name_list_gene.Rdata',
