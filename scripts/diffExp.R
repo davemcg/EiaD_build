@@ -16,9 +16,14 @@ load(args[4]) # core_tight
 de_comparison_contrast_names_file <- args[5]
 output_limma_object_file <- args[6]
 output_list_of_df_file <- args[7]
-
+colnames(lstpms_smoothed) <- str_replace_all(colnames(lstpms_smoothed), '^E\\.MTAB\\.', 'E-MTAB-')
 #colnames(sample_table) <- c('sample_acession','run','paired','tissue','subtissue','origin')
 sample_table <- filter(sample_table, sample_accession %in% colnames(lstpms_smoothed))
+warning('Following Samples not in sample table but in expression matrix')
+print(colnames(lstpms_smoothed)[!colnames(lstpms_smoothed) %in% sample_table$sample_accession])
+keep_samples <- intersect(sample_table$sample_accession, colnames(lstpms_smoothed))
+sample_table <- sample_table %>% filter(sample_accession %in% keep_samples)
+lstpms_smoothed <- lstpms_smoothed[,sample_table$sample_accession]
 eye_samples <- filter(sample_table, Tissue %in% c('Retina','RPE','Cornea','ESC','Lens','Choroid.Plexus'))
 body_samples <- filter(sample_table, !Tissue %in% c('Retina','RPE','Cornea','ESC', 'Lens', 'RetinalEpithelium', 'Choroid.Plexus'))
 set.seed(123421)
@@ -31,14 +36,25 @@ gtex_sample$Tissue <- gtex_sample$Sub_Tissue <-  'Body'
 deg_sample_table <- rbind(eye_samples,gtex_sample,body_samples %>% mutate(Sub_Tissue = Tissue))
 deg_sample_table <- left_join(deg_sample_table, core_tight %>% select(sample_accession, mapping_rate), by = 'sample_accession')
 deg_counts <- lstpms_smoothed[,deg_sample_table$sample_accession]
+cs= colSums(deg_counts) == 0
+if (any(cs)){
+  bs = colnames(deg_counts)[cs]
+  warning('following samples have 0 counts  and will be removed')
+  print(bs)
+  deg_counts=deg_counts[,!cs]
+  deg_sample_table=deg_sample_table %>% filter(!sample_accession %in% bs)
+
+}
+
 Sub_Tissue <- deg_sample_table$Sub_Tissue %>% as.factor()
+deg_sample_table$mapping_rate[is.na( deg_sample_table$mapping_rate)] <- 0
 mapping_rate <- deg_sample_table$mapping_rate %>% as.numeric()
 study <- deg_sample_table$study_accession %>% as.factor()
 design_eye_and_gtex <- model.matrix(~0 + mapping_rate + Sub_Tissue )
 colnames(design_eye_and_gtex) <- c('mapping_rate', levels(Sub_Tissue))
 
 y_eye_gtex <- DGEList(deg_counts)
-y_eye_gtex <- calcNormFactors(y_eye_gtex)
+y_eye_gtex <- calcNormFactors(y_eye_gtex)# calcNormFactors automatically performs TMM normalization when a DGELisgt is the input
 v_eye_gtex <- voom(y_eye_gtex, design_eye_and_gtex)
 vfit_eye_gtex <- lmFit(v_eye_gtex, design_eye_and_gtex)
 
