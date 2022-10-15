@@ -1,5 +1,7 @@
-# Auto Build Core DataSets eyeIntegration
-Snakemake pipeline to build bulk RNA-seq gene/transcript quantifications (and related analyses) for https://eyeintegration.nei.nih.gov from raw sequence data (fastq) and hand-curated metadata (Tissue and Sub_Tissue)
+# Eye in a Disk (EiaD)
 
-# Graph
-![](2019_workflow.svg)
+EiaD is the sqlite database at the core of eyeIntegration.nei.nih.gov
+
+For 2022 (2023?), we have updated the "backend" of EiaD by switching from our homebuid quantification platform (Salmon based) to the recount3 / monorail pipeline. 
+
+
