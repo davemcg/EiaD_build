@@ -43,7 +43,7 @@ big_explosion <- explosion %>%
               mutate(rail_id = as.character(rail_id))) %>% 
   left_join(sra_meta %>% select(Run, Experiment) %>% unique(), by = c("sample_id" = "Run")) 
 
-big_explosion2 <- big_explosion %>%
+big_explosion_sample <- big_explosion %>%
   group_by(chrom, start, end, 
            length, strand, annotated, donor,
            acceptor, left_annotated, right_annotated,
@@ -53,8 +53,4 @@ big_explosion2 <- big_explosion %>%
           junction_avg_coverage, Experiment) %>% 
   summarise(counts = sum(as.integer(counts)))
 
-big_explosion %>% 
-  # join metadata
-  dplyr::rename(run_accession = sample_id) %>% 
-  left_join(eyeIntegration22 %>% select(run_accession, sample_accession) %>% unique()) %>% 
-  data.frame
+big_explosion_sample
