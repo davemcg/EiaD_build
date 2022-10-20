@@ -12,6 +12,7 @@ res <- lapply(exp_set_list , function(x) x[common_names]) %>%   do.call(rbind,.)
 srr_srx <- read_csv('data/SRP191440.txt')
 
 out <- res %>% mutate(sample_accession = Pool.Member.IDENTIFIERS.PRIMARY_ID, 
+                      study_accession = STUDY.IDENTIFIERS.PRIMARY_ID,
                Tissue = 'RPE', 
                Sub_Tissue = 'RPE - Cell Line', 
                Origin = 'Primary Culture', 
