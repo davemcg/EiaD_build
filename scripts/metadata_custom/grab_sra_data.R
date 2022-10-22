@@ -73,3 +73,36 @@ eiad_sra_meta <- bind_rows(sra_meta_list %>% bind_rows(.id = 'run_accession'),
                            
                            
 eiad_sra_meta %>% write_tsv('data/2022-10-20_EiaD_SRA_meta.tsv.gz')
+
+
+# 2022 10 22 add more
+emeta <- data.table::fread('data/eyeIntegration22_meta_for_manual_editing_2022_10_22_update_01.csv') 
+
+sra_meta_list_01 <- list()
+
+for (i in emeta %>% filter(!run_accession %in% eiad_sra_meta$run_accession,
+                           !run_accession %in% names(sra_meta_list_01)) %>%
+     filter(study_accession != 'SRP012682',
+            study_accession != 'SRP389394') %>% 
+     pull(run_accession) %>% unique() ){
+  print(i)
+  sra_grab <- efetch(uid = i, db = 'sra', retmode = 'xml')
+  full_xml <- read_xml(content(sra_grab, 'text')) %>% as_list()
+  exp_set <- full_xml$EXPERIMENT_PACKAGE_SET
+  exp_set_list <- lapply(exp_set, function(x) unlist(x, recursive = T))
+  common_names <- lapply(exp_set_list, names) %>% purrr::reduce(intersect)
+  
+  res <- lapply(exp_set_list , function(x) x[common_names]) %>% 
+    do.call(cbind,.) %>% 
+    as_tibble(rownames = 'category') %>% 
+    group_by(category) %>% 
+    summarise(EXPERIMENT_PACKAGE = paste(EXPERIMENT_PACKAGE %>% unique(), collapse = ', ')) %>% 
+    data.frame()
+  out <- res[,2] %>% t()
+  colnames(out) <- res[,1]
+  
+  sra_meta_list_01[[i]] <- out %>% data.frame()
+  Sys.sleep(2) 
+}
+
+eiad_sra_meta %>% write_tsv('data/2022-10-22_EiaD_SRA_meta.tsv.gz')
