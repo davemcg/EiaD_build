@@ -29,3 +29,20 @@ for (i in srr %>% filter(wounding_condition == 'Unwounded') %>% pull(Run) ){
   SRP252574_list[[i]] <- out %>% data.frame()
   Sys.sleep(1) 
 }
+
+SRP252574_meta <- SRP252574_list %>% bind_rows() %>% mutate(sample_accession = Pool.Member.IDENTIFIERS.PRIMARY_ID, 
+                                          study_accession = STUDY.IDENTIFIERS.PRIMARY_ID,
+                                          Cohort = 'Eye',
+                                          Tissue = 'RPE', 
+                                          Sub_Tissue = NA, 
+                                          Source = 'Primary Culture', 
+                                          Age = NA,
+                                          Age_Days = NA, 
+                                          study_title = STUDY.DESCRIPTOR.STUDY_TITLE, 
+                                          study_abstract = STUDY.DESCRIPTOR.STUDY_ABSTRACT,
+                                          sample_attribute = glue::glue("{SAMPLE.TITLE}; {SAMPLE.SAMPLE_ATTRIBUTES.SAMPLE_ATTRIBUTE.VALUE}"),
+                                          BioSample = Pool.Member.IDENTIFIERS.EXTERNAL_ID,
+                                          region = NA,
+                                          Library_Notes = EXPERIMENT.DESIGN.LIBRARY_DESCRIPTOR.LIBRARY_CONSTRUCTION_PROTOCOL) %>% 
+  select(sample_accession:Library_Notes) %>% 
+  left_join(srr %>% select(run_accession = Run, BioSample))

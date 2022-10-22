@@ -11,11 +11,13 @@ res <- lapply(exp_set_list , function(x) x[common_names]) %>%   do.call(rbind,.)
 
 srr_srx <- read_csv('data/SRP191440.txt')
 
-out <- res %>% mutate(sample_accession = Pool.Member.IDENTIFIERS.PRIMARY_ID, 
+SRP191440_meta <- res %>% 
+  filter(grepl('glucose', SAMPLE.TITLE)) %>% 
+  mutate(sample_accession = Pool.Member.IDENTIFIERS.PRIMARY_ID, 
                       study_accession = STUDY.IDENTIFIERS.PRIMARY_ID,
+                      Cohort = 'Eye',
                Tissue = 'RPE', 
-               Sub_Tissue = 'RPE - Cell Line', 
-               Origin = 'Primary Culture', 
+               Source = 'Primary Culture', 
                Age_Days = NA, 
                study_title = STUDY.DESCRIPTOR.STUDY_TITLE, 
                study_abstract = STUDY.DESCRIPTOR.STUDY_ABSTRACT,
@@ -27,5 +29,5 @@ out <- res %>% mutate(sample_accession = Pool.Member.IDENTIFIERS.PRIMARY_ID,
   left_join(srr_srx %>% select(run_accession = Run, BioSample))
   
 
-write_tsv(out, 'data/SRP191440_eiad_meta.tsv.gz')
+write_tsv(SRP191440_meta, 'data/SRP191440_eiad_meta.tsv.gz')
 

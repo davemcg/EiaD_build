@@ -36,7 +36,7 @@ big_explosion <- explosion %>%
   mutate(samples = gsub('^,','',samples)) %>% 
   # make data long
   separate_rows(samples, sep = ',') %>% 
-  # split raid_id and counts into separate colums
+  # split rail_id and counts into separate columns
   separate(samples, c('rail_id','counts'), ':') %>% 
   # add srr info back
   left_join(snap_samp %>% 
