@@ -8,8 +8,8 @@ library(data.table)
 source("~/git/EiaD_build/scripts/create_count_data_function.R")
 
 # Importing Metadata
-eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
-
+#eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
+emeta <- data.table::fread('data/eyeIntegration22_meta_2022_10_27.02.csv') %>% as_tibble()
 create_count_data_frames("http://duffel.rail.bio/recount3/",
                          c("SRP002881", "SRP011895", "SRP012585", "SRP015336", "SRP016140", "SRP034875",
                            "SRP035641", "SRP045639", "SRP053034", "SRP055101", "SRP061670", "SRP062870",
@@ -17,11 +17,11 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                            "SRP091605", "SRP091675", "SRP092413", "SRP093877", "SRP094572", "SRP097696",
                            "SRP098761", "SRP105756", "SRP106457", "SRP108292", "SRP110135", "SRP111145",
                            "SRP115908", "SRP117613", "SRP119291", "SRP119766", "SRP151763", "SRP159246",
-                           "ERP022243", "SRP090027", "SRP090040", "SRP186009", "SRP156453", "SRP107937"),
+                           "ERP022243", "SRP186009", "SRP156453", "SRP136195"),
                          "recount3_transformed_counts",
                          "aggregated_recount3_transformed_counts",
                          "recount3_mapping_information",
-                         eyeIntegration22)
+                         emeta, empty_cache = FALSE)
 
 
 create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
@@ -32,19 +32,15 @@ create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
                                 "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
                               "gtex_transformed_counts",
                               "aggregated_gtex_transformed_counts",
-                              eyeIntegration22)
+                              emeta)
 
 
-create_count_data_frames("~/data/eiad_rse/",
-                         c("SRP018405", "SRP326606", "SRP323408", "SRP329409",
-                           "SRP331221", "SRP090027", "SRP287234", "SRP070938",
-                           "SRP090040", "SRP310948", "SRP287152", "SRP056957",
-                           "SRP288670", "ERP126780", "SRP257684", "SRP080886",
-                           "SRP300190", "SRP255891", "SRP273695"),
+create_count_data_frames("~/data/eiad_rse/rse/",
+                         emeta %>% filter(data_location == 'local') %>% pull(study_accession) %>% unique(),
                          "local_transformed_counts",
                          "aggregated_local_transformed_counts",
                          "local_mapping_information",
-                         eyeIntegration22)
+                         emeta)
 
 
 

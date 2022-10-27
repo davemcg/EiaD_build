@@ -1,10 +1,17 @@
 ### Function to create count data for non-GTEX samples -----
 
 create_count_data_frames <- 
-  function(recount3_library_url, projects_vector, count_file_name, 
-           aggregated_count_file_name, mapping_file_name, metadata) {
+  function(recount3_library_url, 
+           projects_vector, 
+           count_file_name, 
+           aggregated_count_file_name, 
+           mapping_file_name, 
+           metadata,
+           empty_cache = TRUE) {
     
-    recount3_cache_rm()
+    if (empty_cache){
+      recount3_cache_rm()
+    }
     #Indicating which recount library the function will pull from
     options(recount3_url = recount3_library_url)
     human_projects <- available_projects()
@@ -14,21 +21,29 @@ create_count_data_frames <-
     mapping_data_list <- list()
     # creates list of count data frames
     for (i in projects_vector) {
-      
-      rse_gene = create_rse_manual(i, annotation = "gencode_v29")
-      rse_jx <- create_rse_manual(i, type = 'jxn', annotation = 'gencode_v29')
-      assays(rse_gene)$counts <- transform_counts(rse_gene)
-      
-      rse_gene_counts <- recount::getTPM(rse_gene) %>% data.frame()
-      rse_gene_counts <- rownames_to_column(rse_gene_counts, var = "gene_id")
-      
-      row.names(rse_gene_counts) <- rse_gene_counts$gene_id
-      rse_gene_counts <- rse_gene_counts[,-1, drop=FALSE]
-      counts_data_list[[i]] <- rse_gene_counts
-      #Input mapping data
-      mapping_data_list[[i]] <- colData(rse_gene) %>% as.data.frame()
-      ## coerce to character
-      mapping_data_list[[i]] <- lapply(mapping_data_list[[i]], as.character)
+      success <- NULL
+      attempt <- 1
+      while( is.null(success) && attempt <= 3 ) {
+        try({
+          print(paste(i, 'attempt number:', attempt))
+          attempt <- attempt + 1
+          rse_gene = create_rse_manual(i, annotation = "gencode_v29")
+          assays(rse_gene)$counts <- transform_counts(rse_gene)
+          
+          rse_gene_counts <- recount::getTPM(rse_gene) %>% data.frame()
+          rse_gene_counts <- rownames_to_column(rse_gene_counts, var = "gene_id")
+          
+          row.names(rse_gene_counts) <- rse_gene_counts$gene_id
+          rse_gene_counts <- rse_gene_counts[,-1, drop=FALSE]
+          counts_data_list[[i]] <- rse_gene_counts
+          #Input mapping data
+          mapping_data <- colData(rse_gene) %>% as.data.frame()
+          mapping_data <- mapping_data %>% mutate(across(everything(), as.character))
+          mapping_data_list[[i]] <- mapping_data
+          success <- 'YES'
+          
+        })
+      }
     }
     
     # confirm gene name equality across each data frame
@@ -53,14 +68,14 @@ create_count_data_frames <-
     write.csv(counts_data_frame, 
               file = paste0("gene_counts/", count_file_name, ".csv"), row.names = FALSE)
     #Create mapping file
-    mapping_data_frame <- bind_rows(mapping_data_list)
     system('mkdir -p mapping_data')
+    mapping_data_frame <- bind_rows(mapping_data_list)
     write.csv(mapping_data_frame, 
               file = paste0("mapping_data/", mapping_file_name, ".csv"), row.names = FALSE)
     
     #Aggregating the data
     #Checking to make sure only data in the metadata is included in analysis
-    counts_data_frame_keep <- intersect(names(counts_data_frame), eyeIntegration22$run_accession)
+    counts_data_frame_keep <- intersect(names(counts_data_frame), metadata$run_accession)
     counts_data_frame_final <- counts_data_frame %>% select(one_of(c("gene_id", counts_data_frame_keep)))
     
     #Creating empty list to store aggregated counts in
@@ -68,7 +83,7 @@ create_count_data_frames <-
     #Obtain study names so data can be subset during aggregation
     aggregation_subset_data <- 
       counts_data_frame_final %>% select(-"gene_id") %>% colnames() %>% as_tibble() %>% 
-      dplyr::rename("run_accession" = "value") %>% 
+      rename("value" = "run_accession") %>% 
       left_join(metadata %>% select("study_accession", "run_accession"), by= "run_accession")
     
     for (i in aggregation_subset_data$study_accession %>% unique()){
@@ -112,7 +127,7 @@ create_gtex_count_data_frames <- function(projects_vector, count_file_name,
   
   # creates list of count data frames
   for (i in projects_vector) {
-    print(i)
+    
     rse_gene = create_rse(subset(gtex_data, project == i), annotation = "gencode_v29")
     assays(rse_gene)$counts <- transform_counts(rse_gene)
     
@@ -123,9 +138,9 @@ create_gtex_count_data_frames <- function(projects_vector, count_file_name,
     rse_gene_counts <- rse_gene_counts[,-1]
     counts_data_list[[i]] <- rse_gene_counts
     #Input mapping data
-    mapping_data_list[[i]] <- colData(rse_gene) %>% data.frame()
-    ## coerce to character
-    mapping_data_list[[i]] <- lapply(mapping_data_list[[i]], as.character)
+    mapping_data <- colData(rse_gene) %>% as.data.frame()
+    mapping_data <- mapping_data %>% mutate(across(everything(), as.character))
+    mapping_data_list[[i]] <- mapping_data
   }
   
   # confirm gene name equality across each data frame
@@ -151,17 +166,19 @@ create_gtex_count_data_frames <- function(projects_vector, count_file_name,
   counts_data_frame <- counts_data_frame %>% as_tibble(rownames = 'gene_id')
   
   #Create counts file
+  system('mkdir -p gene_counts')
   write.csv(counts_data_frame, 
             file = paste0("gene_counts/", count_file_name, ".csv"), row.names = FALSE)
+  
   #Create mapping file
-  mapping_data_list <- mapping_data_list %>% map(., as_tibble)
-  mapping_data_frame <- bind_rows((mapping_data_list))
+  system('mkdir -p mapping_data')
+  mapping_data_frame <- bind_rows(mapping_data_list)
   write.csv(mapping_data_frame, 
             file = paste0("mapping_data/", mapping_file_name, ".csv"), row.names = FALSE)
   
   #Aggregating the data
   #Checking to make sure only data in the metadata is included in analysis
-  counts_data_frame_keep <- intersect(names(counts_data_frame), eyeIntegration22$run_accession)
+  counts_data_frame_keep <- intersect(names(counts_data_frame), metadata$run_accession)
   counts_data_frame_final <- counts_data_frame %>% select(one_of(c("gene_id", counts_data_frame_keep)))
   
   #Creating empty list to store aggregated counts in
@@ -170,17 +187,16 @@ create_gtex_count_data_frames <- function(projects_vector, count_file_name,
   long_counts <- counts_data_frame_final %>% pivot_longer(-gene_id)
   names(long_counts) <- c("gene_id", "run_accession", "value")
   #Joining metadata for aggregation
-  long_counts_meta <- long_counts %>% left_join(metadata %>% dplyr::select(sample_accession, run_accession),
+  long_counts_meta <- long_counts %>% left_join(metadata %>% select(sample_accession, run_accession),
                                                 by = c('run_accession'))
   dt_long_counts <- data.table(long_counts_meta)
   long_counts_srs <- dt_long_counts[, value:=mean(value), by=c("sample_accession", "gene_id")]
   
-  #aggregated_counts_data_list[[i]] <- long_counts_srs
+  aggregated_counts_data_list[[i]] <- long_counts_srs
   
   #Bind rows to create aggregated count data frame
-  #aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows()
+  aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows()
   #Create aggregated counts file
-  write.csv(long_counts_srs,
+  write.csv(aggregated_counts_data,
             file = paste0("gene_counts/", aggregated_count_file_name, ".csv"), row.names = FALSE)
 }
-
