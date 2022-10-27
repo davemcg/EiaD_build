@@ -10,6 +10,7 @@ create_count_data_frames <-
            empty_cache = TRUE) {
     
     if (empty_cache){
+      print("Clearing recount3 cache")
       recount3_cache_rm()
     }
     #Indicating which recount library the function will pull from
@@ -111,10 +112,17 @@ create_count_data_frames <-
 ### Function to create count data for GTEX samples -----
 # Since the GTEX data in recount3 is labeled differently, we will use a different function to locate and download this data
 
-create_gtex_count_data_frames <- function(projects_vector, count_file_name, 
-                                          aggregated_count_file_name, mapping_file_name, metadata) {
+create_gtex_count_data_frames <- function(projects_vector, 
+                                          count_file_name, 
+                                          aggregated_count_file_name, 
+                                          mapping_file_name, 
+                                          metadata,
+                                          empty_cache = TRUE) {
   
-  recount3_cache_rm()
+  if (empty_cache){
+    print("Clearing recount3 cache")
+    recount3_cache_rm()
+  }
   #Indicating which recount library the function will pull from
   options(recount3_url = "http://duffel.rail.bio/recount3/")
   human_projects <- available_projects()

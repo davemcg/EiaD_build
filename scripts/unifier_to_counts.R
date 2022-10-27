@@ -24,7 +24,7 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                          emeta, empty_cache = FALSE)
 
 
-create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
+create_gtex_count_data_frames(
                               c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
                                 "VAGINA", "BREAST", "SKIN", "SALIVARY_GLAND", "BRAIN", "ADRENAL_GLAND",
                                 "THYROID", "LUNG", "SPLEEN", "PANCREAS", "ESOPHAGUS", "STOMACH", "COLON",
@@ -32,7 +32,9 @@ create_gtex_count_data_frames("http://duffel.rail.bio/recount3/",
                                 "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
                               "gtex_transformed_counts",
                               "aggregated_gtex_transformed_counts",
-                              emeta)
+                              "gtex_mapping_information",
+                              emeta, empty_cache = FALSE)
+
 
 
 create_count_data_frames("~/data/eiad_rse/rse/",
@@ -40,7 +42,7 @@ create_count_data_frames("~/data/eiad_rse/rse/",
                          "local_transformed_counts",
                          "aggregated_local_transformed_counts",
                          "local_mapping_information",
-                         emeta)
+                         emeta, empty_cache = FALSE)
 
 
 
