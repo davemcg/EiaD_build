@@ -31,7 +31,10 @@ create_count_data_frames <-
           rse_gene = create_rse_manual(i, annotation = "gencode_v29")
           assays(rse_gene)$counts <- transform_counts(rse_gene)
           
-          rse_gene_counts <- recount::getTPM(rse_gene) %>% data.frame()
+          rse_gene_counts <- recount::getTPM(rse_gene, 
+                                             length_var = 'bp_length',
+                                             mapped_var = 'recount_qc.star.all_mapped_reads') %>% 
+            data.frame()
           rse_gene_counts <- rownames_to_column(rse_gene_counts, var = "gene_id")
           
           row.names(rse_gene_counts) <- rse_gene_counts$gene_id
@@ -137,13 +140,19 @@ create_gtex_count_data_frames <- function(projects_vector,
   for (i in projects_vector) {
     
     rse_gene = create_rse(subset(gtex_data, project == i), annotation = "gencode_v29")
+    # cut down to only in metadata
+    rse_gene <- rse_gene[,gsub('-','.', colnames(rse_gene)) %in% metadata$run_accession]
     assays(rse_gene)$counts <- transform_counts(rse_gene)
     
-    rse_gene_counts <- recount::getTPM(rse_gene) %>% data.frame()
+    rse_gene_counts <- recount::getTPM(rse_gene, 
+                                       length_var = 'bp_length',
+                                       mapped_var = 'recount_qc.star.all_mapped_reads') %>% 
+      data.frame()
     rse_gene_counts <- rownames_to_column(rse_gene_counts, var = "gene_id")
     
     row.names(rse_gene_counts) <- rse_gene_counts[,1]
     rse_gene_counts <- rse_gene_counts[,-1]
+  
     counts_data_list[[i]] <- rse_gene_counts
     #Input mapping data
     mapping_data <- colData(rse_gene) %>% as.data.frame()

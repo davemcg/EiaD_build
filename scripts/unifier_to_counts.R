@@ -9,7 +9,7 @@ source("~/git/EiaD_build/scripts/create_count_data_function.R")
 
 # Importing Metadata
 #eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
-emeta <- data.table::fread('data/eyeIntegration22_meta_2022_10_27.02.csv') %>% as_tibble()
+emeta <- data.table::fread('data/eyeIntegration22_meta_2022_10_27.02.csv.gz') %>% as_tibble()
 create_count_data_frames("http://duffel.rail.bio/recount3/",
                          c("SRP002881", "SRP011895", "SRP012585", "SRP015336", "SRP016140", "SRP034875",
                            "SRP035641", "SRP045639", "SRP053034", "SRP055101", "SRP061670", "SRP062870",
@@ -62,7 +62,7 @@ gene_counts <- bind_rows(aggregated_recount3_transformed_counts,
                          aggregated_gtex_transformed_counts,
                          aggregated_local_data_additions_transformed_counts)
 
-mat <- gene_counts %>% select(-run_accession) %>% unique() %>% pivot_wider(values_from = value, names_from = sample_accession)
+mat <- gene_counts %>% select(-sample_accession) %>% unique() %>% pivot_wider(values_from = value, names_from = sample_accession)
 
 ### Write final gene_counts csv file -----
 write_csv(gene_counts, "gene_counts/gene_counts.csv.gz", progress = TRUE)
