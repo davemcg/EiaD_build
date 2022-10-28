@@ -98,7 +98,7 @@ create_count_data_frames <-
       long_counts_subset <- counts_subset %>% pivot_longer(-gene_id)
       names(long_counts_subset) <- c("gene_id", "run_accession", "value")
       #Joining metadata for aggregation
-      long_counts_meta <- long_counts_subset %>% left_join(metadata %>% select(sample_accession, run_accession),
+      long_counts_meta <- long_counts_subset %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
                                                            by = c('run_accession'))
       dt_long_counts <- data.table(long_counts_meta)
       long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(gene_id, sample_accession)]
@@ -106,14 +106,12 @@ create_count_data_frames <-
       aggregated_counts_data_list[[i]] <- long_counts_srs
     }
     #Bind rows to create aggregated count data frame
-    aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows()
+    aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows() %>% unique()
     #Create aggregated counts file
     write.csv(aggregated_counts_data,
               file = paste0("gene_counts/", aggregated_count_file_name, ".csv"), row.names = FALSE)
   }
 
-### Function to create count data for GTEX samples -----
-# Since the GTEX data in recount3 is labeled differently, we will use a different function to locate and download this data
 
 create_gtex_count_data_frames <- function(projects_vector, 
                                           count_file_name, 
@@ -121,6 +119,9 @@ create_gtex_count_data_frames <- function(projects_vector,
                                           mapping_file_name, 
                                           metadata,
                                           empty_cache = TRUE) {
+  ### Function to create count data for GTEX samples -----
+  # Since the GTEX data in recount3 is labeled differently, we will use a different function to locate and download this data
+  
   
   if (empty_cache){
     print("Clearing recount3 cache")
@@ -138,7 +139,7 @@ create_gtex_count_data_frames <- function(projects_vector,
   
   # creates list of count data frames
   for (i in projects_vector) {
-    
+    print(i)  
     rse_gene = create_rse(subset(gtex_data, project == i), annotation = "gencode_v29")
     # cut down to only in metadata
     rse_gene <- rse_gene[,gsub('-','.', colnames(rse_gene)) %in% metadata$run_accession]
@@ -204,16 +205,16 @@ create_gtex_count_data_frames <- function(projects_vector,
   long_counts <- counts_data_frame_final %>% pivot_longer(-gene_id)
   names(long_counts) <- c("gene_id", "run_accession", "value")
   #Joining metadata for aggregation
-  long_counts_meta <- long_counts %>% left_join(metadata %>% select(sample_accession, run_accession),
+  long_counts_meta <- long_counts %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
                                                 by = c('run_accession'))
   dt_long_counts <- data.table(long_counts_meta)
-  long_counts_srs <- dt_long_counts[, value:=mean(value), by=c("sample_accession", "gene_id")]
+  long_counts_srs <- dt_long_counts[, value:=mean(value), by=c("sample_accession", "gene_id")] %>% as_tibble() %>% select(-run_accession)
   
-  aggregated_counts_data_list[[i]] <- long_counts_srs
+  #aggregated_counts_data_list[[i]] <- long_counts_srs
   
   #Bind rows to create aggregated count data frame
-  aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows()
+  #aggregated_counts_data <- aggregated_counts_data_list %>% bind_rows()
   #Create aggregated counts file
-  write.csv(aggregated_counts_data,
+  write.csv(long_counts_srs,
             file = paste0("gene_counts/", aggregated_count_file_name, ".csv"), row.names = FALSE)
 }
