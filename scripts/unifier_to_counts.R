@@ -68,4 +68,4 @@ mat <- gene_counts %>% unique() %>% pivot_wider(values_from = value, names_from 
 ### Write files ---------
 write_csv(gene_counts, "gene_counts/gene_counts.csv.gz", progress = TRUE)
 write_csv(mat, "gene_counts/gene_counts_matrix.csv.gz", progress = TRUE)
-write_csv(r3metadata, "")
+write_csv(r3metadata, "mapping_data/recount_metadata.csv.gz")
