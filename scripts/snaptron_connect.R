@@ -17,7 +17,7 @@ explosion <- pool %>% tbl('intron') %>% as_tibble() # only has one table
 ## also has junction_count and junction_coverage info
 ## needed for norm
 snap_samp <- read_tsv('~/data/eiad_rse/samples.tsv')
-sra_meta <- read_tsv('~/git/EiaD_build/data/organoid_meta_2022.tsv.gz')
+emeta <- data.table::fread('data/eyeIntegration22_meta_2022_10_27.03.csv.gz') %>% as_tibble()
 
 # TPM norm
 # https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/
@@ -38,19 +38,20 @@ big_explosion <- explosion %>%
   separate_rows(samples, sep = ',') %>% 
   # split rail_id and counts into separate columns
   separate(samples, c('rail_id','counts'), ':') %>% 
-  # add srr info back
   left_join(snap_samp %>% 
               mutate(rail_id = as.character(rail_id))) %>% 
-  left_join(sra_meta %>% select(Run, Experiment) %>% unique(), by = c("sample_id" = "Run")) 
+  left_join(emeta, by = c("sample_id" = "run_accession")) %>% 
+  mutate(counts = as.integer(counts),
+         junction_coverage = as.integer(junction_coverage),
+         CPM = (counts * 1e6) / 
+           junction_coverage)
 
-big_explosion_sample <- big_explosion %>%
+big_explosion_by_tissue <- big_explosion %>%
   group_by(chrom, start, end, 
            length, strand, annotated, donor,
-           acceptor, left_annotated, right_annotated,
-          samples_count, coverage_sum,
-           coverage_avg, coverage_median, source_dataset_id,
-           study_id, setup, junction_count, junction_coverage,
-          junction_avg_coverage, Experiment) %>% 
-  summarise(counts = sum(as.integer(counts)))
+           acceptor, left_annotated, right_annotated, Tissue) %>% 
+  summarise(CPM = mean(CPM))
 
-big_explosion_sample
+wide <- big_explosion_by_tissue %>% 
+ungroup() %>% 
+  pivot_wider(names_from = Tissue, values_from = CPM)
