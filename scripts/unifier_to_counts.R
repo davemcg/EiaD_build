@@ -29,19 +29,19 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
 
 
 create_count_data_frames("http://duffel.rail.bio/recount3/",
-                              c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
-                                "VAGINA", "BREAST", "SKIN", "SALIVARY_GLAND", "BRAIN", "ADRENAL_GLAND",
-                                "THYROID", "LUNG", "SPLEEN", "PANCREAS", "ESOPHAGUS", "STOMACH", "COLON",
-                                "SMALL_INTESTINE", "PROSTATE", "TESTIS", "NERVE", "PITUITARY", "BLOOD",
-                                "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
-                              "GTEX_TPM",
-                              "long_GTEX_TPM",
-                              "GTEX_count",
-                              "long_GTEX_count",
-                              "gtex_mapping_information",
-                              emeta, 
-                              empty_cache = FALSE,
-                              GTEX = TRUE)
+                         c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
+                           "VAGINA", "BREAST", "SKIN", "SALIVARY_GLAND", "BRAIN", "ADRENAL_GLAND",
+                           "THYROID", "LUNG", "SPLEEN", "PANCREAS", "ESOPHAGUS", "STOMACH", "COLON",
+                           "SMALL_INTESTINE", "PROSTATE", "TESTIS", "NERVE", "PITUITARY", "BLOOD",
+                           "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
+                         "GTEX_TPM",
+                         "long_GTEX_TPM",
+                         "GTEX_count",
+                         "long_GTEX_count",
+                         "gtex_mapping_information",
+                         emeta, 
+                         empty_cache = FALSE,
+                         GTEX = TRUE)
 
 
 
@@ -69,7 +69,7 @@ recount3_counts <- vroom::vroom("gene_counts/recount3_count.csv.gz") %>% data.fr
 gtex_counts <- vroom::vroom("gene_counts/GTEX_count.csv.gz") %>% data.frame()
 local_counts <- vroom::vroom("gene_counts/local_count.csv.gz")  %>% data.frame()
 
-# Calling aggregated metadata
+# Calling  metadata
 recount3_metadata <- vroom::vroom("mapping_data/recount3_mapping_information.csv.gz")
 gtex_metadata <- vroom::vroom("mapping_data/gtex_mapping_information.csv.gz")
 local_metadata <- vroom::vroom("mapping_data/local_mapping_information.csv.gz")
@@ -85,10 +85,11 @@ gene_TPM <- bind_rows(recount3_TPM,
 mat_TPM <- gene_TPM %>% unique() %>% pivot_wider(values_from = value, names_from = sample_accession)
 
 # make matrix counts
-mat <- cbind((recount3_counts %>% data.frame())[,2:ncol(recount3_counts)],
-      (local_counts %>% data.frame())[,2:ncol(local_counts)],
-      (gtex_counts %>% data.frame())[,2:ncol(gtex_counts)])
-row.names(mat) <- recount3_counts[,1]
+mat <- cbind(recount3_counts[,1],
+             (recount3_counts %>% data.frame())[,2:ncol(recount3_counts)],
+             (local_counts %>% data.frame())[,2:ncol(local_counts)],
+             (gtex_counts %>% data.frame())[,2:ncol(gtex_counts)])
+colnames(mat)[1] <- 'gene_id'
 
 ### Write files ---------
 write_csv(gene_TPM, "gene_counts/gene_TPM.csv.gz", progress = TRUE)
