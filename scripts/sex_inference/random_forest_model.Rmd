@@ -1,0 +1,114 @@
+---
+title: "random_forest_model"
+author: "Prashit Parikh"
+date: "11/01/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+chooseCRANmirror(graphics=FLASE, ind=1)
+knitr::opts_chunk$set(echo = TRUE)
+
+install.packages("randomForest")
+library(randomForest)
+install.packages("caret")
+library(caret)
+install.packages("tidyverse")
+library(tidyverse)
+
+# Set working directory
+setwd("/Users/parikhpp/git/sex_inference")
+```
+
+**Running Prediction Model based on Gene Counts Data**
+
+```{r, warning=FALSE}
+### All data files necessary for analysis can be found here (files must be uncompressed prior to use):
+# https://hpc.nih.gov/~parikhpp/sex_inference/insert_file_name_here.csv.gz
+
+# Load data for genes of interest and labeled sex only
+regression_data <- read.csv("data/inference_regression_data.csv") %>% 
+  select(-run_accession, -recount_qc.aligned_reads..chrx, -recount_qc.aligned_reads..chry)
+
+# View our variable of interest
+regression_data$sex %>% table()
+
+# Split the data into an experiment and training set
+
+set.seed(1020)
+experiment.samples <- regression_data$sex %>% 
+  createDataPartition(p = 0.5, list = FALSE)
+training.data  <- regression_data[experiment.samples, ]
+experiment.data <- regression_data[-experiment.samples, ]
+
+# Split the training set into a train and test set
+
+set.seed(1020)
+training.samples <- training.data$sex %>% 
+  createDataPartition(p = 0.5, list = FALSE)
+train.data <- training.data[training.samples, ]
+test.data <- training.data[-training.samples, ]
+
+# Run random forest
+
+rf <- randomForest(as.factor(sex) ~ ., data=train.data, proximity=TRUE)
+print(rf)
+
+# Predictions - train
+p1 <- predict(rf, train.data)
+confusionMatrix(p1, as.factor(train.data$sex))
+
+# Predictions - test
+p2 <- predict(rf, test.data)
+confusionMatrix(p2, as.factor(test.data$sex))
+
+# Predictions - experiment
+p3 <- predict(rf, experiment.data)
+confusionMatrix(p3, as.factor(experiment.data$sex))
+```
+
+**Running Prediction Model based on Alignment Data**
+
+```{r, warning=FALSE}
+# Load data for alignment to x and y chromosome only
+regression_data_xy <- read.csv("data/inference_regression_data.csv") %>% 
+  select(recount_qc.aligned_reads..chrx, recount_qc.aligned_reads..chry, sex)
+
+# View our variable of interest
+regression_data_xy$sex %>% table()
+
+# Split the data into an experiment and training set
+
+set.seed(1020)
+experiment.samples <- regression_data_xy$sex %>% 
+  createDataPartition(p = 0.5, list = FALSE)
+training.data  <- regression_data_xy[experiment.samples, ]
+experiment.data <- regression_data_xy[-experiment.samples, ]
+
+# Split the training set into a train and test set
+
+set.seed(1020)
+training.samples <- training.data$sex %>% 
+  createDataPartition(p = 0.5, list = FALSE)
+train.data <- training.data[training.samples, ]
+test.data <- training.data[-training.samples, ]
+
+# Run random forest
+
+rf <- randomForest(as.factor(sex) ~ ., data=train.data, proximity=TRUE)
+print(rf)
+
+# Predictions - train
+p1 <- predict(rf, train.data)
+confusionMatrix(p1, as.factor(train.data$sex))
+
+# Predictions - test
+p2 <- predict(rf, test.data)
+confusionMatrix(p2, as.factor(test.data$sex))
+
+# Predictions - experiment
+p3 <- predict(rf, experiment.data)
+confusionMatrix(p3, as.factor(experiment.data$sex))
+```
