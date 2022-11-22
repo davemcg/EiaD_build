@@ -1,0 +1,345 @@
+
+```{r}
+library(tidyverse)
+
+load('../data/EiaD_pca_analysis.Rdata')
+```
+
+# Run PCA 
+
+On log2 scaled TPM which I have pre-setup from EiaD resources in scripts/pca_workup_data_prep.R 
+
+scripts/pca_workup_data_prep.R also calls scripts/scEiaD_PBcounts_toTPM.R which creates a TPM matrix from data pulled dircectly from scEiaD / plae.nei.nih.gov
+
+
+```{r}
+##################################################
+# PCA time
+
+library(matrixStats)
+ntop = 1000
+Pvars <- rowVars(log2(TPMall+1))
+select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
+                                                      length(Pvars)))]
+PCA <- prcomp(t(log2(TPMall[select, ]+1)), scale = F)
+percentVar <- round(100*PCA$sdev^2/sum(PCA$sdev^2),1)
+
+dataGG = cbind(PCA$x, meta_TPMall)
+```
+
+# Top level look
+
+## PC1 and PC2
+```{r, fig.width=10, fig.height=8}
+pcFirst <- 'PC1'
+pcSecond <- 'PC2'
+# rotations for pc1 and pc2
+top_rotations <- 
+  c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
+    PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names(),
+    PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
+    PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names()) %>% 
+  unique()
+
+dataGG %>%
+  #filter(Source != 'scRNA') %>% 
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
+  geom_point(size=3, aes(color=Tissue, shape = Source)) +
+  geom_segment(data = PCA$rotation[rotations,] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
+  ggrepel::geom_label_repel(data = PCA$rotation[rotations,] %>% 
+                              as_tibble(rownames = 'Gene') %>% 
+                              mutate(Gene = gsub(' \\(.*','',Gene)), 
+                            aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
+  xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
+  ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_shape_manual(values = 0:10) #+
+```
+
+## PC3 and PC4
+```{r, fig.width=10, fig.height=8}
+pcFirst <- 'PC3'
+pcSecond <- 'PC4'
+# rotations for pc1 and pc2
+top_rotations <- 
+  c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
+    PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names(),
+    PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
+    PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names()) %>% 
+  unique()
+
+dataGG %>%
+  #filter(Source != 'scRNA') %>% 
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
+  geom_point(size=3, aes(color=Tissue, shape = Source)) +
+  geom_segment(data = PCA$rotation[rotations,] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
+  ggrepel::geom_label_repel(data = PCA$rotation[rotations,] %>% 
+                              as_tibble(rownames = 'Gene') %>% 
+                              mutate(Gene = gsub(' \\(.*','',Gene)), 
+                            aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
+  xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
+  ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_shape_manual(values = 0:10) #+
+```
+
+## PC5 and PC6
+```{r, fig.width=10, fig.height=8}
+pcFirst <- 'PC5'
+pcSecond <- 'PC6'
+# rotations for pc1 and pc2
+top_rotations <- 
+  c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
+    PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names(),
+    PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
+    PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names()) %>% 
+  unique()
+
+dataGG %>%
+  #filter(Source != 'scRNA') %>% 
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
+  geom_point(size=3, aes(color=Tissue, shape = Source)) +
+  geom_segment(data = PCA$rotation[rotations,] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
+  ggrepel::geom_label_repel(data = PCA$rotation[rotations,] %>% 
+                              as_tibble(rownames = 'Gene') %>% 
+                              mutate(Gene = gsub(' \\(.*','',Gene)), 
+                            aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
+  xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
+  ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_shape_manual(values = 0:10) #+
+```
+
+```{r}
+dataGG %>%
+  #filter(Source != 'scRNA') %>% 
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(PC1, PC2)) +
+  geom_point(size=3, aes(color=Tissue, shape = Source)) +
+  
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_shape_manual(values = 0:10) + facet_wrap(~Source)
+
+
+dataGG %>%
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(PC1, PC2)) +
+  geom_point(size=3, aes(color=Tissue, shape = Source)) +
+  
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_shape_manual(values = 0:10) + facet_wrap(~Tissue)
+
+
+
+dataGG %>%
+  filter(Source == 'scRNA') %>% 
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(PC1, PC2)) +
+  geom_point(size=3, aes(color=Tissue, shape = Source)) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  facet_wrap(~Tissue)
+
+
+# retina Ct PC1 plot
+dataGG %>%
+  filter(Source == 'scRNA', Tissue == 'Retina') %>% 
+  as_tibble() %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(x=PC1, y=CellType)) + geom_boxplot() + 
+  geom_point(size=3, aes(color=CellType)) +
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname())
+
+# facet by tissue
+dataGG %>% 
+  filter(Source != 'scRNA') %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue)) %>% 
+  ggplot(., aes(PC1, PC2, color=Tissue, shape=Source)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2()) %>% unname())+
+  facet_wrap(~Tissue, scales = 'fixed')
+# facetted, shape by  age
+dataGG %>% 
+  mutate(Tissue = case_when(Tissue == 'Brain' ~ Tissue,
+                            Tissue == 'Pituitary' ~ Tissue,
+                            Cohort == 'Body' ~ 'Body',
+                            TRUE ~ Tissue),
+         Age = case_when(is.na(Age) ~ 'None',
+                         TRUE ~ Age)) %>% 
+  ggplot(., aes(PC1, PC2, color=Tissue, shape=Age)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2()) %>% unname())+
+  facet_wrap(~Tissue, scales = 'fixed')
+
+# RPE, by source_details and Age
+dataGG %>% 
+  mutate(Age = case_when(is.na(Age) ~ 'None',
+                         TRUE ~ Age)) %>% 
+  filter(Tissue == 'RPE') %>% 
+  ggplot(., aes(PC1, PC2, color=Source_details, shape=Age)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2()) %>% unname())
+
+# RPE, by study
+dataGG %>% 
+  mutate(Age = case_when(is.na(Age) ~ 'None',
+                         TRUE ~ Age),
+         study_title = str_wrap(study_title)) %>% 
+  filter(study_accession == 'SRP273695') %>% 
+  ggplot(., aes(PC1, PC2, color=study_title)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::alphabet2(), pals::glasbey()) %>% unname()) +
+  facet_wrap(~Tissue)
+
+# mislabled retina/RPE????
+# RPE, by study
+dataGG %>% 
+  mutate(Age = case_when(is.na(Age) ~ 'None',
+                         TRUE ~ Age),
+         study_title = str_wrap(study_title)) %>% 
+  filter(study_accession == 'SRP273695') %>% 
+  ggplot(., aes(PC1, PC2, color=Sub_Tissue, label = sample_accession)) +
+  geom_point(size=3) + ggrepel::geom_text_repel() +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::alphabet2(), pals::glasbey()) %>% unname()) +
+  facet_wrap(~Tissue,ncol = 1)
+
+
+#####################
+# PCA with only eye
+######################
+
+eye_samples <- gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(sample_accession)
+mat_eye <- mat[,eye_samples]
+
+ntop = 1000
+Pvars <- rowVars(mat_eye)
+select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
+                                                      length(Pvars)))]
+PCA <- prcomp(t(mat_eye[select, ]), scale = F)
+percentVar <- round(100*PCA$sdev^2/sum(PCA$sdev^2),1)
+dataGG_eye = data.frame(PC1 = PCA$x[,1], PC2 = PCA$x[,2], 
+                        PC3 = PCA$x[,3], PC4 = PCA$x[,4], 
+                        Tissue = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(Tissue),
+                        Source = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(Source),
+                        Source_details = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(Source_details),
+                        Cohort =gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(Cohort),
+                        Age = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(Age),
+                        Sub_Tissue = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat)) %>% pull(Sub_Tissue))
+
+
+
+dataGG_eye %>% 
+  ggplot(., aes(PC1, PC2, color=Tissue, shape=Source)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2()) %>% unname())
+
+
+
+
+#####################
+# PCA with only eye passing simple QC (not on first brush much different)
+######################
+# qc workup
+r3meta <- data.table::fread('mapping_data/mapping_data.csv.gz') %>% as_tibble()
+r3meta <- r3meta %>% mutate(sample_accession  = case_when(!is.na(sra.sample_acc) ~ sra.sample_acc, !is.na(sra.sample_acc.x) ~ sra.sample_acc.x)) 
+
+r3_aggr <- r3meta %>% group_by(sample_accession) %>% summarise(intron_align_perc = mean(recount_qc.intron_sum_.), unique_mapping_perc = mean(recount_qc.star.uniquely_mapped_reads_.))
+
+problem_samples <- r3_aggr %>% filter(intron_align_perc > 20 | unique_mapping_perc < 60) %>% pull(sample_accession)
+
+eye_samples_qc <- gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(sample_accession)
+mat_eye_qc <- mat[,eye_samples_qc]
+
+ntop = 1000
+Pvars <- rowVars(mat_eye)
+select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
+                                                      length(Pvars)))]
+PCA <- prcomp(t(mat_eye_qc[select, ]), scale = F)
+percentVar <- round(100*PCA$sdev^2/sum(PCA$sdev^2),1)
+dataGG_eye_qc = data.frame(PC1 = PCA$x[,1], PC2 = PCA$x[,2], 
+                           PC3 = PCA$x[,3], PC4 = PCA$x[,4], 
+                           Tissue = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(Tissue),
+                           Source = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(Source),
+                           Source_details = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(Source_details),
+                           Cohort =gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(Cohort),
+                           Age = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(Age),
+                           Sub_Tissue = gene_count_meta %>% filter(Cohort == 'Eye', sample_accession %in% colnames(mat), !sample_accession %in% problem_samples) %>% pull(Sub_Tissue))
+
+
+
+dataGG_eye_qc %>% 
+  ggplot(., aes(PC1, PC2, color=Tissue, shape=Source)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2()) %>% unname())
+
+```
+
+
