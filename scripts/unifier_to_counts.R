@@ -9,7 +9,11 @@ source("~/git/EiaD_build/scripts/create_count_data_function.R")
 
 # Importing Metadata
 #eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
-emeta <- data.table::fread('data/eyeIntegration22_meta_2022_10_27.03.csv.gz') %>% as_tibble()
+emeta <- data.table::fread('data/eyeIntegration22_meta_2022_11_16.01.csv') %>% as_tibble()
+
+
+
+# OPTIONAL
 create_count_data_frames("http://duffel.rail.bio/recount3/",
                          c("SRP002881", "SRP011895", "SRP012585", "SRP015336", "SRP016140", "SRP034875",
                            "SRP035641", "SRP045639", "SRP053034", "SRP055101", "SRP061670", "SRP062870",
@@ -27,7 +31,7 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                          empty_cache = FALSE,
                          GTEX = FALSE)
 
-
+# OPTIONAL
 create_count_data_frames("http://duffel.rail.bio/recount3/",
                          c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
                            "VAGINA", "BREAST", "SKIN", "SALIVARY_GLAND", "BRAIN", "ADRENAL_GLAND",
@@ -73,7 +77,11 @@ local_counts <- vroom::vroom("gene_counts/local_count.csv.gz")  %>% data.frame()
 recount3_metadata <- vroom::vroom("mapping_data/recount3_mapping_information.csv.gz")
 gtex_metadata <- vroom::vroom("mapping_data/gtex_mapping_information.csv.gz")
 local_metadata <- vroom::vroom("mapping_data/local_mapping_information.csv.gz")
-r3metadata <- bind_rows(recount3_metadata, gtex_metadata, local_metadata )
+# add back in sample_accession as it is occasionally missing
+r3metadata <- bind_rows(recount3_metadata %>% left_join(emeta %>% dplyr::select(external_id = run_accession, sample_accession, gtex_accession), by = 'external_id'), 
+                        gtex_metadata %>% left_join(emeta %>% dplyr::select(external_id = run_accession, sample_accession, gtex_accession), by = 'external_id'), 
+                        local_metadata %>% left_join(emeta %>% dplyr::select(external_id = run_accession, sample_accession), by = 'external_id') ) %>% 
+  filter(external_id %in% emeta$run_accession)
 
 # Combine long TPM
 gene_TPM <- bind_rows(recount3_TPM,
