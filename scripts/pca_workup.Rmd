@@ -9,7 +9,7 @@ load('../data/EiaD_pca_analysis.Rdata')
 
 On log2 scaled TPM which I have pre-setup from EiaD resources in scripts/pca_workup_data_prep.R 
 
-scripts/pca_workup_data_prep.R also calls scripts/scEiaD_PBcounts_toTPM.R which creates a TPM matrix from data pulled dircectly from scEiaD / plae.nei.nih.gov
+scripts/pca_workup_data_prep.R also calls scripts/scEiaD_PBcounts_toTPM.R which creates a TPM matrix from data pulled directly from scEiaD / plae.nei.nih.gov
 
 
 ```{r}
@@ -18,13 +18,41 @@ scripts/pca_workup_data_prep.R also calls scripts/scEiaD_PBcounts_toTPM.R which 
 
 library(matrixStats)
 ntop = 1000
-Pvars <- rowVars(log2(TPMall+1))
-select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
-                                                      length(Pvars)))]
-PCA <- prcomp(t(log2(TPMall[select, ]+1)), scale = F)
-percentVar <- round(100*PCA$sdev^2/sum(PCA$sdev^2),1)
 
-dataGG = cbind(PCA$x, meta_TPMall)
+do_pca <- function(gene_by_sample, meta){
+  Pvars <- rowVars(log2(gene_by_sample+1))
+  select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
+                                                        length(Pvars)))]
+  PCA <- prcomp(t(log2(gene_by_sample[select, ]+1)), scale = F)
+  percentVar <- round(100*PCA$sdev^2/sum(PCA$sdev^2),1)
+  
+  dataGG = cbind(PCA$x, meta)
+  out <- list(PCA, dataGG, percentVar, select)
+  out
+}
+
+TPMall_sub <- TPMall[,emeta %>% filter(Cohort == 'Eye', study_accession != 'SRP273695') %>% pull(sample_accession)]
+
+# eye only
+out <- do_pca(TPMall_sub,emeta %>% filter(Cohort == 'Eye', study_accession != 'SRP273695'))
+PCA <- out[[1]]
+dataGG <- out[[2]]
+percentVar <- out[[3]]
+
+# all
+out <- do_pca(TPMall,meta_TPMall)
+PCA <- out[[1]]
+dataGG <- out[[2]]
+percentVar <- out[[3]]
+select <- out[[4]]
+
+# all minus scRNA
+# all
+out <- do_pca(TPM, emeta %>% select(sample_accession, BioSample, study_accession, Cohort, Tissue,  Sub_Tissue, Source, Age) %>% unique())
+PCA <- out[[1]]
+dataGG <- out[[2]]
+percentVar <- out[[3]]
+select <- out[[4]]
 ```
 
 # Top level look
@@ -33,6 +61,7 @@ dataGG = cbind(PCA$x, meta_TPMall)
 ```{r, fig.width=10, fig.height=8}
 pcFirst <- 'PC1'
 pcSecond <- 'PC2'
+rotations <- c(pcFirst, pcSecond)
 # rotations for pc1 and pc2
 top_rotations <- 
   c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
@@ -50,8 +79,8 @@ dataGG %>%
                             TRUE ~ Tissue)) %>% 
   ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
   geom_point(size=3, aes(color=Tissue, shape = Source)) +
-  geom_segment(data = PCA$rotation[rotations,] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
-  ggrepel::geom_label_repel(data = PCA$rotation[rotations,] %>% 
+  geom_segment(data = PCA$rotation[top_rotations,rotations] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
+  ggrepel::geom_label_repel(data = PCA$rotation[top_rotations,rotations] %>% 
                               as_tibble(rownames = 'Gene') %>% 
                               mutate(Gene = gsub(' \\(.*','',Gene)), 
                             aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
@@ -74,7 +103,7 @@ top_rotations <-
     PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
     PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names()) %>% 
   unique()
-
+rotations  <- 1
 dataGG %>%
   #filter(Source != 'scRNA') %>% 
   as_tibble() %>% 
@@ -341,5 +370,69 @@ dataGG_eye_qc %>%
   scale_color_manual(values = c(pals::glasbey(), pals::alphabet2()) %>% unname())
 
 ```
+
+# Distances
+```{r}
+
+dist_processor <- function(samples_as_row_matrix, metadata){
+  # row.names must be given that match `sample_accession` in metadata
+  # matrix should be log2 (or whatever) normalized
+  #euc_dist <- dist(t(log2(TPMall[select,]+1)), method = 'euclidean')
+  if ((nrow(metadata) != nrow(samples_as_row_matrix))){
+    stop("Matrix row num != metadata row num!")
+  }
+  if (metadata$sample_accession != row.names(samples_as_row_matrix)){
+    stop("Matrix row names != metadata row names!")
+  }
+  euc_dist <- dist(samples_as_row_matrix, method = 'euclidean')
+  euc_dist <- as.matrix(euc_dist)
+  
+  # metadata:
+  # metadata %>% select(sample_accession, BioSample, study_accession, Cohort, Tissue,  Sub_Tissue, Source, Age) %>% unique()
+  xy <- t(combn(colnames(euc_dist), 2))
+  euc_dist_long <- data.frame(xy, dist=euc_dist[xy])
+  colnames(euc_dist_long) <- c('sample_accession', 'against', 'dist')
+  euc_dist_long_meta <- euc_dist_long %>% 
+    left_join(metadata, by = 'sample_accession')
+  euc_dist_long_meta
+}
+
+tpm_meta <- emeta %>% 
+  select(sample_accession, 
+         BioSample, study_accession, Cohort, 
+         Tissue, Sub_Tissue, Source, Age) %>% unique()
+
+
+tpm_dist <- dist_processor(log2(TPM[select,]+1) %>% t(), 
+                           tpm_meta)
+pca_mat <- PCA$x[,1:10]
+row.names(pca_mat) <- tpm_meta$sample_accession
+pca_dist <- dist_processor(pca_mat,
+                           tpm_meta)
+
+
+tpm_dist %>%
+  # metadata for the "against" sample
+  left_join(emeta %>% select(sample_accession, 
+                             study_accession2 = study_accession, 
+                             Tissue2 = Tissue,
+                             Cohort2 = Cohort) %>% unique(), 
+            by = c('against' = 'sample_accession')) %>% 
+  filter(study_accession != study_accession2, 
+         study_accession != 'SRP273695',
+         #study_accession2 != 'SRP273695',
+         Cohort == 'Eye', Cohort2 == 'Eye') %>% 
+  as_tibble() %>% 
+  group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age) %>% 
+  slice_min(n = 20, order_by = dist) %>%
+  ungroup() %>% 
+  group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age, Tissue2) %>% 
+  summarise(Count = n()) %>% 
+  mutate(Tissue3 = paste0(Tissue2, ' (', Count,')')) %>% 
+  summarise(Count = sum(Count[Tissue != Tissue2]),
+            Tissue2 = paste(Tissue3, collapse = ',') ) %>%  
+  DT::datatable()
+```
+
 
 
