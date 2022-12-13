@@ -74,6 +74,12 @@ row.names(TPMall) <- row.names(TPMall) %>%
   left_join(gene_annotations %>% mutate(gene_id = gsub("\\.\\d+$","",gene_id))) %>% 
   mutate(ID = paste0(gene_name, ' (', gene_id, ')')) %>% 
   pull(ID)
+
+row.names(TPM) <- row.names(TPM) %>% 
+  enframe(value = 'gene_id') %>% 
+  left_join(gene_annotations %>% mutate(gene_id = gsub("\\.\\d+$","",gene_id))) %>% 
+  mutate(ID = paste0(gene_name, ' (', gene_id, ')')) %>% 
+  pull(ID)
 ########################################################
 
 ######################################################
