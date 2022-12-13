@@ -1,0 +1,265 @@
+---
+title: "tissue_prediction"
+author: "Prashit Parikh and David McGaughey"
+date: "2022-12-08"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("tidyverse")
+library(tidyverse)
+#install.packages("caret")
+library(caret)
+#install.packages("tibble")
+library(tibble)
+#install.packages("ggiraph")
+library(ggiraph)
+#install.packages("xgboost")
+library(xgboost)
+#install.packages("randomForest")
+library(randomForest)
+# 
+# # Set working directory
+# setwd("/Users/parikhpp/git/sex_inference/")
+```
+
+
+```{r, warning=FALSE}
+eyeIntegration22 <-
+  vroom::vroom("data/eyeIntegration22_meta_2022_11_16.01.csv")
+# remove duplicated entries
+eyeIntegration22 <- eyeIntegration22 %>% dplyr::select(-sample_title, -gtex_sra_run_accession, -run_accession) %>% unique()
+# Remove mislabeled study
+eyeIntegration22 <- eyeIntegration22 %>% filter(study_accession != "SRP273695")
+# Rename GTEX
+eyeIntegration22 <- mutate(eyeIntegration22, xgTissue = case_when(
+  Tissue == "Brain" ~ "Brain",
+  Tissue == "Pituitary" ~ "Pituitary",
+  Cohort == "Body" ~ "Body", 
+  Cohort == "Eye" ~ Tissue))
+
+high_count_tissues <- eyeIntegration22 %>% group_by(xgTissue) %>% 
+  summarise(Count = n()) %>% 
+  filter(Count > 20) %>% 
+  pull(xgTissue)
+# Remove tissues with limited observations
+eyeIntegration22_filtered <- eyeIntegration22 %>% filter(xgTissue %in% high_count_tissues)
+
+
+gene_TPM_counts <-  vroom::vroom("gene_counts/gene_TPM_matrix.csv.gz")
+
+gene_counts <- gene_TPM_counts %>% column_to_rownames(var="gene_id")
+gene_counts <- gene_counts %>% as.matrix()
+gene_counts <- log2(gene_counts + 1)
+
+# Transpose matrix to add metadata
+t_gene_counts <- t(gene_counts)
+    
+#Make data frame
+t_gene_counts_data <- as.data.frame(t_gene_counts)
+t_gene_counts_data <- t_gene_counts_data %>% tibble::rownames_to_column(var = "sample_accession")
+
+# Only include samples in filtered metadata
+t_gene_counts_data <- t_gene_counts_data %>%  filter(sample_accession %in% eyeIntegration22_filtered$sample_accession)
+
+# Left_join metadata
+eyeIntegration22_filtered_ordered <- t_gene_counts_data$sample_accession %>% enframe(value = 'sample_accession') %>%
+  select(-name) %>% 
+  left_join(eyeIntegration22_filtered)
+t_gene_counts_data <- bind_cols(t_gene_counts_data, eyeIntegration22_filtered_ordered %>% select(-sample_accession))
+
+# Subset genes to use via PCA
+
+top_var <- apply(t_gene_counts_data, 2, var)
+    
+# take top 2000 genes
+top_2k <- top_var %>% sort() %>% tail(2000)
+# PCA    
+pca <- prcomp(t_gene_counts_data[,names(top_2k)])
+
+# Extract top 1000 genes for first 10 components
+pc_1_genes <- 
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC1)) %>% dplyr::select(Gene) %>% head(10)
+pc_2_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC2)) %>% dplyr::select(Gene) %>% head(10)
+pc_3_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC3)) %>% dplyr::select(Gene) %>% head(10)
+pc_4_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC4)) %>% dplyr::select(Gene) %>% head(10)
+pc_5_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC5)) %>% dplyr::select(Gene) %>% head(10)
+pc_6_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC6)) %>% dplyr::select(Gene) %>% head(10)
+pc_7_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC7)) %>% dplyr::select(Gene) %>% head(10)
+pc_8_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC8)) %>% dplyr::select(Gene) %>% head(10)
+pc_9_genes <- 
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC9)) %>% dplyr::select(Gene) %>% head(10)
+pc_10_genes <-
+  pca$rotation %>% as_tibble(rownames = 'Gene') %>% arrange(-abs(PC10)) %>% dplyr::select(Gene) %>% head(10)
+
+pc_genes <- bind_rows(pc_1_genes, pc_2_genes, pc_3_genes,
+                      pc_4_genes, pc_5_genes, pc_6_genes,
+                      pc_7_genes, pc_8_genes, pc_9_genes,
+                      pc_10_genes) %>% unique()
+
+# Extract top 1000 genes with the highest variance overall
+variance_data <- data.frame(variance = (pca$sdev)^2, top_2k)
+variance_data <- variance_data[order(variance_data$variance),]
+variance_data <- variance_data %>% tibble::rownames_to_column(var = "Gene")
+var_genes <- variance_data[1:100,] %>% select(Gene)
+```
+# Make sure PCA isn't garbage
+```{r}
+dataGG = cbind(pca$x, t_gene_counts_data[,c('xgTissue','Source')])
+pcFirst <- 'PC1'
+pcSecond <- 'PC2'
+dataGG %>%
+  as_tibble() %>% 
+
+  ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
+  geom_point(size=3, aes(color=xgTissue, shape = Source)) +
+  cowplot::theme_cowplot() +
+  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
+  scale_shape_manual(values = 0:10) #+
+```
+
+Running tissue prediction using PC Genes
+
+```{r, warning=FALSE}
+# Extract PC genes of interest
+gene_TPM_counts_PC <- gene_counts[pc_genes$Gene, eyeIntegration22_filtered_ordered$sample_accession]
+# replace gene name
+gene_annotations <- 
+  rtracklayer::import("data/human.gene_sums.G029.gtf.gz") %>% 
+  as.data.frame()
+row.names(gene_TPM_counts_PC) <- row.names(gene_TPM_counts_PC) %>% 
+  enframe(value = 'gene_id') %>% 
+  left_join(gene_annotations %>% 
+              select(gene_id, gene_name) %>% unique() ) %>% 
+  pull(gene_name)
+
+#Transform data long-ways
+TPM_long <- t(gene_TPM_counts_PC) %>% as.data.frame()
+names(TPM_long) <-row.names(gene_TPM_counts_PC)
+TPM_long <- tibble::rownames_to_column(TPM_long, "sample_accession")
+
+# Create regression data
+regression_data <- eyeIntegration22_filtered_ordered %>% 
+  select(xgTissue, sample_accession) %>% 
+  left_join(TPM_long, by = "sample_accession")
+
+
+
+```
+
+```{r, warning=FALSE}
+# Split the data into an experiment and training set
+
+set.seed(2022-12-09)
+experiment.samples <- regression_data$xgTissue %>% 
+  createDataPartition(p = 0.5, list = FALSE)
+training.data  <- regression_data[experiment.samples, ]
+experiment.data <- regression_data[-experiment.samples, ]
+
+# Split the training set into a train and test set
+
+set.seed(2022-12-09)
+training.samples <- training.data$xgTissue %>% 
+  createDataPartition(p = 0.5, list = FALSE)
+train.data <- training.data[training.samples, ]
+test.data <- training.data[-training.samples, ]
+
+train.data_model <- train.data %>% select(-sample_accession)
+test.data_model <- test.data %>% select(-sample_accession)
+experiment.data_model <- experiment.data %>% select(-sample_accession)
+```
+
+# xgboost
+
+```{r, warning=FALSE}
+bstDMatrix <- xgboost(data = train.data_model[,2:ncol(train.data_model)] %>% as.matrix(), 
+                      label = train.data_model$xgTissue %>% as.factor() %>% as.numeric(), 
+              nrounds = 100, early_stopping_rounds = 5)
+
+# Test data
+
+pred <- data.frame(prediction_value = predict(bstDMatrix, test.data_model[,-1] %>% as.matrix()))
+test_pred <- bind_cols(test.data_model, pred)
+
+# Plot values for prediction by tissue
+ggplot(test_pred, aes(x=xgTissue, y=prediction_value)) + geom_boxplot()
+
+pred_tissues <- case_when(pred <= 1.5 ~ "Body",
+                          pred > 1.5 & pred <= 2.5 ~ "Brain",
+                          pred > 2.5 & pred <= 3.5 ~ "Conjunctiva",
+                          pred > 3.5 & pred <= 4.5 ~ "Cornea",
+                           pred > 4.5 & pred <= 5.5 ~ "ESC",
+                           pred > 5.5 & pred <= 6.5 ~ "Pituitary",
+                          pred > 6.5 & pred <= 7.5 ~ "Retina",
+                          pred > 7.5 ~ "RPE")
+observed_tissues <- test.data_model$xgTissue
+mean(pred_tissues == observed_tissues)
+
+# Confusion Matrix
+confusionMatrix(test.data_model$xgTissue %>% as.factor() %>% as.numeric() %>% as.factor(), pred$prediction_value %>% round(digits = 0) %>% as.factor())
+
+# Experiment data
+
+pred <- data.frame(prediction_value = predict(bstDMatrix, experiment.data_model[,-1] %>% as.matrix()))
+exp_pred <- bind_cols(experiment.data_model, pred)
+
+# Plot values for prediction by tissue
+ggplot(exp_pred, aes(x=xgTissue, y=prediction_value)) + geom_boxplot()
+
+pred_tissues <- case_when(pred <= 1.5 ~ "Body",
+                          pred > 1.5 & pred <= 2.5 ~ "Brain",
+                          pred > 2.5 & pred <= 3.5 ~ "Conjunctiva",
+                          pred > 3.5 & pred <= 4.5 ~ "Cornea",
+                           pred > 4.5 & pred <= 5.5 ~ "ESC",
+                           pred > 5.5 & pred <= 6.5 ~ "Pituitary",
+                          pred > 6.5 & pred <= 7.5 ~ "Retina",
+                          pred > 7.5 ~ "RPE")
+observed_tissues <- experiment.data_model$xgTissue
+mean(pred_tissues == observed_tissues)
+
+# Confusion Matrix
+confusionMatrix(experiment.data_model$xgTissue %>% as.factor() %>% as.numeric() %>% as.factor(), pred$prediction_value %>% round(digits = 0) %>% as.factor())
+```
+
+# svm
+```{r}
+library(e1071)
+svm <- svm(as.factor(xgTissue) ~ ., data=train.data_model, type = 'C-classification')
+# Predictions - test
+p2 <- predict(svm, test.data_model)
+confusionMatrix(p2, as.factor(test.data_model$xgTissue))
+p2_data <- data.frame(predicted_tissue = predict(svm, test.data_model[,2:ncol(test.data_model)]))
+mean(p2_data$predicted_tissue == test.data_model$xgTissue)
+
+```
+# random forest
+
+```{r, warning=FALSE}
+# Run random forest
+
+rf <- randomForest(as.factor(xgTissue) ~ ., data=train.data_model, proximity=TRUE)
+print(rf)
+
+# Predictions - test
+p2 <- predict(rf, test.data_model)
+confusionMatrix(p2, as.factor(test.data_model$xgTissue))
+p2_data <- data.frame(predicted_tissue = predict(rf, test.data_model))
+mean(p2_data$predicted_tissue == test.data_model$xgTissue)
+
+# Predictions - experiment
+p3 <- predict(rf, experiment.data_model)
+confusionMatrix(p3, as.factor(experiment.data_model$xgTissue))
+p3_data <- data.frame(predicted_tissue = predict(rf, experiment.data_model))
+mean(p3_data$predicted_tissue == experiment.data_model$xgTissue)
+```
