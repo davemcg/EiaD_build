@@ -20,6 +20,12 @@ library(matrixStats)
 ntop = 1000
 
 do_pca <- function(gene_by_sample, meta){
+  # TPM values for gene_by_sample
+  # metadata rows must match columns of gene_by_sample
+  # quick checker for data mismatch
+  if (!(colnames(TPM) == tpm_meta$sample_accession) %>% sum() == ncol(TPM)){
+    stop("Check metadata and matrix samples name matching")
+  }
   Pvars <- rowVars(log2(gene_by_sample+1))
   select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
                                                         length(Pvars)))]
@@ -31,15 +37,28 @@ do_pca <- function(gene_by_sample, meta){
   out
 }
 
-TPMall_sub <- TPMall[,emeta %>% filter(Cohort == 'Eye', study_accession != 'SRP273695') %>% pull(sample_accession)]
+# , study_accession != 'SRP273695'
+TPMall_eye <- TPMall[,emeta %>% filter(Cohort == 'Eye') %>% pull(sample_accession)]
+TPMall_eye_meta <- emeta %>% filter(Cohort == 'Eye')
 
+# makes tpm metadata
+tpm_meta <- colnames(TPM) %>% enframe(value = 'sample_accession') %>% 
+  left_join(emeta %>% 
+              select(sample_accession, 
+                     BioSample, study_accession, Cohort, 
+                     Tissue, Sub_Tissue, Source, Age) %>% unique(),
+            by = 'sample_accession')
+
+# hand run chunks below
 # eye only
-out <- do_pca(TPMall_sub,emeta %>% filter(Cohort == 'Eye', study_accession != 'SRP273695'))
+out <- do_pca(TPMall_eye,
+              TPMall_eye_meta)
 PCA <- out[[1]]
 dataGG <- out[[2]]
 percentVar <- out[[3]]
+select <- out[[4]]
 
-# all
+# all (including scRNA data scEiaD/plae)
 out <- do_pca(TPMall,meta_TPMall)
 PCA <- out[[1]]
 dataGG <- out[[2]]
@@ -48,7 +67,17 @@ select <- out[[4]]
 
 # all minus scRNA
 # all
-out <- do_pca(TPM, emeta %>% select(sample_accession, BioSample, study_accession, Cohort, Tissue,  Sub_Tissue, Source, Age) %>% unique())
+out <- do_pca(TPM, tpm_meta)
+PCA <- out[[1]]
+dataGG <- out[[2]]
+percentVar <- out[[3]]
+select <- out[[4]]
+
+# all minus scRNA with only protein coding genes
+pc_ensgene <- gene_annotations %>% filter(gene_type == 'protein_coding') %>% pull(gene_id) %>% gsub('\\.\\d+$','',.)
+pc_gene_name <- gene_annotations %>% filter(gene_type == 'protein_coding') %>% pull(gene_name) 
+pc_gene_full <- paste0(pc_gene_name, ' (', pc_ensgene, ')')
+out <- do_pca(TPM[pc_gene_full,], tpm_meta)
 PCA <- out[[1]]
 dataGG <- out[[2]]
 percentVar <- out[[3]]
@@ -58,10 +87,11 @@ select <- out[[4]]
 # Top level look
 
 ## PC1 and PC2
-```{r, fig.width=10, fig.height=8}
+```{r, fig.width=8, fig.height=6}
 pcFirst <- 'PC1'
 pcSecond <- 'PC2'
 rotations <- c(pcFirst, pcSecond)
+rotation_multipler <- 800
 # rotations for pc1 and pc2
 top_rotations <- 
   c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
@@ -79,11 +109,11 @@ dataGG %>%
                             TRUE ~ Tissue)) %>% 
   ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
   geom_point(size=3, aes(color=Tissue, shape = Source)) +
-  geom_segment(data = PCA$rotation[top_rotations,rotations] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
+  geom_segment(data = PCA$rotation[top_rotations,rotations] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*rotation_multipler, yend = .data[[pcSecond]]*rotation_multipler)) +
   ggrepel::geom_label_repel(data = PCA$rotation[top_rotations,rotations] %>% 
                               as_tibble(rownames = 'Gene') %>% 
                               mutate(Gene = gsub(' \\(.*','',Gene)), 
-                            aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
+                            aes(x=.data[[pcFirst]]*rotation_multipler, y = .data[[pcSecond]] * rotation_multipler, label = Gene)) +
   xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
   ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
   cowplot::theme_cowplot() +
@@ -93,17 +123,19 @@ dataGG %>%
 ```
 
 ## PC3 and PC4
-```{r, fig.width=10, fig.height=8}
+```{r, fig.width=8, fig.height=6}
 pcFirst <- 'PC3'
 pcSecond <- 'PC4'
-# rotations for pc1 and pc2
+rotations <- c(pcFirst, pcSecond)
+rotation_multipler <- 400
+# rotations for pc3 and pc4
 top_rotations <- 
   c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
     PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names(),
     PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
     PCA$rotation[,str_extract(pcSecond, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names()) %>% 
   unique()
-rotations  <- 1
+
 dataGG %>%
   #filter(Source != 'scRNA') %>% 
   as_tibble() %>% 
@@ -113,11 +145,11 @@ dataGG %>%
                             TRUE ~ Tissue)) %>% 
   ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
   geom_point(size=3, aes(color=Tissue, shape = Source)) +
-  geom_segment(data = PCA$rotation[rotations,] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
-  ggrepel::geom_label_repel(data = PCA$rotation[rotations,] %>% 
+  geom_segment(data = PCA$rotation[top_rotations,rotations] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*rotation_multipler, yend = .data[[pcSecond]]*rotation_multipler)) +
+  ggrepel::geom_label_repel(data = PCA$rotation[top_rotations,rotations] %>% 
                               as_tibble(rownames = 'Gene') %>% 
                               mutate(Gene = gsub(' \\(.*','',Gene)), 
-                            aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
+                            aes(x=.data[[pcFirst]]*rotation_multipler, y = .data[[pcSecond]] * rotation_multipler, label = Gene)) +
   xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
   ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
   cowplot::theme_cowplot() +
@@ -127,10 +159,12 @@ dataGG %>%
 ```
 
 ## PC5 and PC6
-```{r, fig.width=10, fig.height=8}
+```{r, fig.width=8, fig.height=6}
 pcFirst <- 'PC5'
 pcSecond <- 'PC6'
-# rotations for pc1 and pc2
+rotations <- c(pcFirst, pcSecond)
+rotation_multipler <- 200
+# rotations for pc5 and pc6
 top_rotations <- 
   c(PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% head(3) %>% names(),
     PCA$rotation[,str_extract(pcFirst, '\\d+') %>% as.integer()] %>% sort() %>% tail(3) %>% names(),
@@ -147,11 +181,11 @@ dataGG %>%
                             TRUE ~ Tissue)) %>% 
   ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
   geom_point(size=3, aes(color=Tissue, shape = Source)) +
-  geom_segment(data = PCA$rotation[rotations,] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*1000, yend = .data[[pcSecond]]*1000)) +
-  ggrepel::geom_label_repel(data = PCA$rotation[rotations,] %>% 
+  geom_segment(data = PCA$rotation[top_rotations,rotations] %>% data.frame(), aes(x=0,y=0, xend = .data[[pcFirst]]*rotation_multipler, yend = .data[[pcSecond]]*rotation_multipler)) +
+  ggrepel::geom_label_repel(data = PCA$rotation[top_rotations,rotations] %>% 
                               as_tibble(rownames = 'Gene') %>% 
                               mutate(Gene = gsub(' \\(.*','',Gene)), 
-                            aes(x=.data[[pcFirst]]*1000, y = .data[[pcSecond]] * 1000, label = Gene)) +
+                            aes(x=.data[[pcFirst]]*rotation_multipler, y = .data[[pcSecond]] * rotation_multipler, label = Gene)) +
   xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
   ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
   cowplot::theme_cowplot() +
@@ -160,6 +194,7 @@ dataGG %>%
   scale_shape_manual(values = 0:10) #+
 ```
 
+# Screwing around don't worry about
 ```{r}
 dataGG %>%
   #filter(Source != 'scRNA') %>% 
@@ -397,31 +432,31 @@ dist_processor <- function(samples_as_row_matrix, metadata){
   euc_dist_long_meta
 }
 
-tpm_meta <- emeta %>% 
-  select(sample_accession, 
-         BioSample, study_accession, Cohort, 
-         Tissue, Sub_Tissue, Source, Age) %>% unique()
 
 
+# dist by TPM
 tpm_dist <- dist_processor(log2(TPM[select,]+1) %>% t(), 
                            tpm_meta)
-pca_mat <- PCA$x[,1:10]
-row.names(pca_mat) <- tpm_meta$sample_accession
+
+# dist by PCA
+pca_mat <- PCA$x[,1:2]
+row.names(pca_mat) <- TPMall_eye_meta$sample_accession
 pca_dist <- dist_processor(pca_mat,
-                           tpm_meta)
+                           TPMall_eye_meta)
 
-
-tpm_dist %>%
+# cut paste either tpm_dist or pca_dist
+pca_dist %>%
   # metadata for the "against" sample
-  left_join(emeta %>% select(sample_accession, 
-                             study_accession2 = study_accession, 
-                             Tissue2 = Tissue,
-                             Cohort2 = Cohort) %>% unique(), 
+  left_join(emeta %>% dplyr::select(sample_accession, 
+                                    study_accession2 = study_accession, 
+                                    Tissue2 = Tissue,
+                                    Cohort2 = Cohort) %>% unique(), 
             by = c('against' = 'sample_accession')) %>% 
   filter(study_accession != study_accession2, 
          study_accession != 'SRP273695',
          #study_accession2 != 'SRP273695',
-         Cohort == 'Eye', Cohort2 == 'Eye') %>% 
+         Cohort == 'Eye', 
+         Cohort2 == 'Eye') %>% 
   as_tibble() %>% 
   group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age) %>% 
   slice_min(n = 20, order_by = dist) %>%
@@ -432,6 +467,7 @@ tpm_dist %>%
   summarise(Count = sum(Count[Tissue != Tissue2]),
             Tissue2 = paste(Tissue3, collapse = ',') ) %>%  
   DT::datatable()
+
 ```
 
 
