@@ -101,7 +101,40 @@ db_create_index(gene_pool_2022, 'gene_IDs', 'ID')
 dbWriteTable(gene_pool_2022, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
 
-#Loading in Rdata
+#load in scRNA data from plae/scEiaD
+pb <- read_tsv('http://hpc.nih.gov/~mcgaugheyd/scEiaD/2022_03_22/4000-counts-universe-study_accession-scANVIprojection-15-5-20-50-0.1-CellType-Homo_sapiens.pseudoCounts.tsv.gz') 
+
+######################################
+# TPM conversion needs the GTF to calculate the gene sizes
+# wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/gencode.v35.annotation.gtf.gz
+library(GenomicFeatures) 
+# build DB
+txdb <- makeTxDbFromGFF("gencode.v35.annotation.gtf.gz",format="gtf")
+# aggregate by gene
+exons_gene <- exonsBy(txdb,by="gene")
+# calc gene sizes
+gene_sizes <- as.data.frame(sum(width(reduce(exons_gene))))
+# gene name (ENSG) has \.\d+ which are not used in the PB matrix
+# so we erase them to facilitate the join later
+row.names(gene_sizes) <- gsub('\\.\\d+','',row.names(gene_sizes))
+colnames(gene_sizes)[1] <- 'length'
+###########################################
+
+
+# only keep pb genes that also exist gtf (because our PB matrix has mouse/macaque gene names)
+pbH <- pb %>% filter(Gene %in% row.names(gene_sizes))
+# get length info you calculated in the block above with makeTxDbFromGFF/etc/gene_sizes
+## doing this wacky join to ensure the sizes are the in the same order as the matrix
+len_info <- pbH$Gene %>% enframe() %>% left_join(gene_sizes %>% as_tibble(rownames = 'value')) 
+# remove gene name col and turn into matrix
+pbM <- pbH[,2:ncol(pbH)] %>% as.matrix()
+# divide each gene by transcript length
+TPMpblen <- apply( pbM, 2, function(x){ x / len_info$length } )
+# divide again the transcript length and apply 1e6 multiplier
+TPMpb <- apply( TPMpblen, 2, function(x) { x / sum(x) * 1E6} )
+row.names(TPMpb) <- pbH$Gene
+
+# load in table info
 load("/Users/mcgaugheyd/data/EiaD/www/scEiaD_CT_table.Rdata")
 names(scEiaD_CT_table) <- c("Gene", "CellType_predict", "organism", "study_accession", "Stage", "Cell # Detected", "Total Cells", "% of Cells Detected", "Meanlog2(Counts+1)")
 
@@ -109,7 +142,7 @@ names(scEiaD_CT_table) <- c("Gene", "CellType_predict", "organism", "study_acces
 scEiaD_pool <- dbConnect(RSQLite::SQLite(), dbname = "scEiaD.sqlite")
 
 #Writing the tables
-dbWriteTable(scEiaD_pool, 'scEiaD_CT_table', scEiaD_CT_table, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(scEiaD_pool, 'scEiaD_CT_table_info', scEiaD_CT_table, row.names = FALSE, overwrite = TRUE)
 dbWriteTable(scEiaD_pool, 'cell_types', scEiaD_CT_table %>% ungroup() %>% select(CellType_predict) %>% unique() %>% arrange() %>% filter(!is.na(CellType_predict)), row.names = FALSE, overwrite = TRUE)
 dbWriteTable(scEiaD_pool, 'gene_IDs', scEiaD_CT_table[,1], row.names = FALSE, overwrite = TRUE)
 dbWriteTable(scEiaD_pool, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
