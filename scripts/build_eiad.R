@@ -8,17 +8,21 @@ library(dtplyr)
 
 
 #Initialize gene_pool
-gene_pool_2022 <- dbConnect(RSQLite::SQLite(), dbname = "eyeIntegration_2022_human.sqlite")
+gene_pool_2022 <- dbConnect(RSQLite::SQLite(), dbname = "~/git/eyeIntegration_app/inst/app/www/2022/eyeIntegration_2022_human.sqlite")
 
 #Load necessary files
-eyeIntegration22 <- data.table::fread("data/eyeIntegration22_meta_2022_11_06.01.csv") %>% as_tibble() %>% 
+eyeIntegration22 <- data.table::fread("data/eyeIntegration22_meta_2023_03_03.csv.gz") %>% 
+  as_tibble() %>% 
   mutate(Perturbation = case_when(grepl('MGS', Source_details) ~ Source_details %>% gsub('Adult Tissue ', '', .))) 
 gene_counts <- vroom::vroom("gene_counts/gene_TPM.csv.gz") %>% data.table::as.data.table()
 ############ load count matrix to ID zero count genes#
 count_matrix <- vroom::vroom("gene_counts/gene_counts_matrix.csv.gz") %>% data.table::as.data.table()
 genes_above_zero <- count_matrix$gene_id[rowSums(count_matrix[,2:ncol(count_matrix)]) > 0]
 #####################################################
-mapping_data <- vroom::vroom("mapping_data/mapping_data.csv.gz")
+mapping_data <- bind_rows(vroom::vroom("mapping_data/recount3_mapping_information.csv.gz"),
+                            vroom::vroom("mapping_data/local_mapping_information.csv.gz"),
+                          vroom::vroom("mapping_data/gtex_mapping_information.csv.gz")) %>% 
+  filter(sra.sample_acc.x %in% eyeIntegration22$sample_accession)
 # http://duffel.rail.bio/recount3/human/new_annotations/gene_sums/human.gene_sums.G029.gtf.gz
 gene_annotations <- 
   rtracklayer::import("data/human.gene_sums.G029.gtf.gz") %>% 
@@ -101,48 +105,78 @@ db_create_index(gene_pool_2022, 'gene_IDs', 'ID')
 dbWriteTable(gene_pool_2022, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
 
-#load in scRNA data from plae/scEiaD
-pb <- read_tsv('http://hpc.nih.gov/~mcgaugheyd/scEiaD/2022_03_22/4000-counts-universe-study_accession-scANVIprojection-15-5-20-50-0.1-CellType-Homo_sapiens.pseudoCounts.tsv.gz') 
+
+
+###########################################################################
+# build sc database
+#############################################################################
+# load in scRNA pseudobulk counts data from plae/scEiaD
+pb <- read_tsv('http://hpc.nih.gov/~mcgaugheyd/scEiaD/2022_03_22/4000-counts-universe-study_accession-scANVIprojection-15-5-20-50-0.1-CellType_predict-Homo_sapiens.Staged.pseudoCounts.tsv.gz') 
 
 ######################################
-# TPM conversion needs the GTF to calculate the gene sizes
-# wget ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_35/gencode.v35.annotation.gtf.gz
-library(GenomicFeatures) 
-# build DB
-txdb <- makeTxDbFromGFF("gencode.v35.annotation.gtf.gz",format="gtf")
-# aggregate by gene
-exons_gene <- exonsBy(txdb,by="gene")
-# calc gene sizes
-gene_sizes <- as.data.frame(sum(width(reduce(exons_gene))))
-# gene name (ENSG) has \.\d+ which are not used in the PB matrix
-# so we erase them to facilitate the join later
-row.names(gene_sizes) <- gsub('\\.\\d+','',row.names(gene_sizes))
-colnames(gene_sizes)[1] <- 'length'
+# update gene names
+gtf35 <- rtracklayer::readGFF("gencode.v35.annotation.gtf.gz")
+gene_names_tib <- gtf35 %>% dplyr::select(gene_name, gene_id) %>% unique() %>% mutate(gene_id = gsub('\\.\\d+','', gene_id))
 ###########################################
 
-
 # only keep pb genes that also exist gtf (because our PB matrix has mouse/macaque gene names)
-pbH <- pb %>% filter(Gene %in% row.names(gene_sizes))
-# get length info you calculated in the block above with makeTxDbFromGFF/etc/gene_sizes
-## doing this wacky join to ensure the sizes are the in the same order as the matrix
-len_info <- pbH$Gene %>% enframe() %>% left_join(gene_sizes %>% as_tibble(rownames = 'value')) 
-# remove gene name col and turn into matrix
-pbM <- pbH[,2:ncol(pbH)] %>% as.matrix()
-# divide each gene by transcript length
-TPMpblen <- apply( pbM, 2, function(x){ x / len_info$length } )
-# divide again the transcript length and apply 1e6 multiplier
-TPMpb <- apply( TPMpblen, 2, function(x) { x / sum(x) * 1E6} )
-row.names(TPMpb) <- pbH$Gene
+pbH <- pb %>% filter(Gene %in% gene_names_tib$gene_id)
+genes <- pbH$Gene
+pbH <- pbH %>% dplyr::select(-Gene)
 
-# load in table info
-load("/Users/mcgaugheyd/data/EiaD/www/scEiaD_CT_table.Rdata")
-names(scEiaD_CT_table) <- c("Gene", "CellType_predict", "organism", "study_accession", "Stage", "Cell # Detected", "Total Cells", "% of Cells Detected", "Meanlog2(Counts+1)")
+# scale norm (z scaling)
+scalePB <- scale(as.matrix(pbH), center = FALSE)
+# make gene id / ensg names
+nnames <- genes %>% enframe() %>% left_join(gene_names_tib, by = c('value'='gene_id'))
+if (nrow(nnames) != nrow(pbH)){
+  print("OH NO")
+  stop()
+}
+
+row.names(scalePB) <- paste0(nnames$gene_name, ' (', nnames$value, ')')
+# make long
+scalePB_out <-  scalePB %>% as_tibble(rownames = 'Gene')  %>% pivot_longer(-Gene) %>% separate(name, c("study_accession","CellType_predict","Stage"), "__")
+
+
+# load in table info from scEiaD
+# make with EiaD_build/scripts/pull_scEiaD.R
+load("data/scEiaD_CT_table_2023_03_01.Rdata")
+meta_filter <- fst::read_fst('~/data/scEiaD_2022_02//meta_filter.fst') 
+
+# get gene names synced up
+genes <- scEiaD_CT_table %>% ungroup() %>% dplyr::select(Gene) %>% arrange(Gene) %>% unique()
+scalePB_out_filter <- scalePB_out %>% filter(Gene %in% genes$Gene, value > 0)
+
+
+# get cell counts by the groupings
+meta_counts <- meta_filter %>% 
+  filter(organism == 'Homo sapiens', Source == 'Tissue') %>% 
+  mutate(Organ = case_when(Organ == 'Eye' ~ 'Eye', TRUE ~ 'Body'))  %>% 
+  group_by(study_accession, Organ,  CellType_predict, Stage) %>% 
+  summarise(Count = n()) %>% 
+  filter(Count > 50) 
+
+# build some rough anatomical sections for the cell types for plot splitting
+ct_site <- meta_filter %>% filter(Organ == 'Eye', !is.na(CellType)) %>% group_by(Tissue, CellType) %>% summarise(Count = n()) %>% filter(Count > 10) %>% group_by(CellType) %>% summarise(Tissue = paste0(Tissue, collapse = ', '))
+
+ct_site <- ct_site %>% mutate(Site = case_when(CellType %in% c('B-Cell', 'Blood Vessel', 'Endothelial','Fibroblast','Macrophage', 'Mast', 'Melanocyte', 'Monocyte', 'Pericyte', 'Red Blood Cell', 'Schwann', 'Smooth Muscle', 'T/NK-Cell') ~ 'Eye',
+                                               grepl("Ciliary", Tissue) ~ 'Front Eye',
+                                               grepl("Retina|Choroid|RPE", Tissue) ~ 'Back Eye',
+                                               TRUE ~ 'Front Eye')) 
 
 #Creating scEiaD database
-scEiaD_pool <- dbConnect(RSQLite::SQLite(), dbname = "scEiaD.sqlite")
-
+scEiaD_pool <- dbConnect(RSQLite::SQLite(), dbname = "~/git/eyeIntegration_app/inst/app/www/2022/scEiaD.sqlite")
 #Writing the tables
 dbWriteTable(scEiaD_pool, 'scEiaD_CT_table_info', scEiaD_CT_table, row.names = FALSE, overwrite = TRUE)
-dbWriteTable(scEiaD_pool, 'cell_types', scEiaD_CT_table %>% ungroup() %>% select(CellType_predict) %>% unique() %>% arrange() %>% filter(!is.na(CellType_predict)), row.names = FALSE, overwrite = TRUE)
-dbWriteTable(scEiaD_pool, 'gene_IDs', scEiaD_CT_table[,1], row.names = FALSE, overwrite = TRUE)
-dbWriteTable(scEiaD_pool, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
+db_create_index(scEiaD_pool, 'scEiaD_CT_table_info', 'Gene')
+dbWriteTable(scEiaD_pool, 'cell_types', scEiaD_CT_table %>% ungroup() %>% dplyr::select(CellType_predict) %>% unique() %>% arrange() %>% filter(!is.na(CellType_predict)), row.names = FALSE, overwrite = TRUE)
+dbWriteTable(scEiaD_pool, 'gene_IDs', genes, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(scEiaD_pool, 'pseudoBulk',scalePB_out_filter  %>% dplyr::rename(zCount = value), row.names = FALSE, overwrite = TRUE)
+db_create_index(scEiaD_pool, 'pseudoBulk', 'Gene')
+dbWriteTable(scEiaD_pool, 'scEiaD_meta_counts', meta_counts, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(scEiaD_pool, 'ct_site', ct_site,  row.names = FALSE, overwrite = TRUE)
+dbWriteTable(scEiaD_pool, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% dplyr::select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
+
+# disconnect pools
+dbDisconnect(scEiaD_pool)
+dbDisconnect(gene_pool_2022)
