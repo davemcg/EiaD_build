@@ -9,8 +9,9 @@ source("~/git/EiaD_build/scripts/create_count_data_function.R")
 
 # Importing Metadata
 #eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
-emeta <- data.table::fread('data/eyeIntegration22_meta_2022_11_16.01.csv') %>% as_tibble()
-
+emeta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% filter(study_accession != 'SRP273695') %>%  as_tibble()
+# emeta <- emeta %>% mutate(data_location = case_when(study_accession == 'SRP273695' ~ 'local',
+#                                                     TRUE ~ data_location))
 
 
 # OPTIONAL
@@ -89,15 +90,26 @@ gene_TPM <- bind_rows(recount3_TPM,
                       local_TPM) %>% 
   unique()
 
+
+
 # make matrix TPM
 mat_TPM <- gene_TPM %>% unique() %>% pivot_wider(values_from = value, names_from = sample_accession)
 
+# check for missing samples
+if (sum(!emeta$sample_accession %in% colnames(mat_TPM)) > 0){
+  print("MISSING SAMPLES!!!!!")
+  emeta$sample_accession[!emeta$sample_accession %in% colnames(mat_TPM)]
+}
+  
+  
 # make matrix counts
 mat <- cbind(recount3_counts[,1],
              (recount3_counts %>% data.frame())[,2:ncol(recount3_counts)],
              (local_counts %>% data.frame())[,2:ncol(local_counts)],
              (gtex_counts %>% data.frame())[,2:ncol(gtex_counts)])
 colnames(mat)[1] <- 'gene_id'
+
+
 
 ### Write files ---------
 write_csv(gene_TPM, "gene_counts/gene_TPM.csv.gz", progress = TRUE)
