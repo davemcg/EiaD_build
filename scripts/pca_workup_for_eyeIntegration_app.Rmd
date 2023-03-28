@@ -15,8 +15,6 @@ emeta <- data.table::fread('../data/eyeIntegration22_meta_2023_03_03.csv.gz')
 ```
 
 ```{r}
-# Functions and Metadata for downstream analysis
-
 do_pca <- function(gene_by_sample, meta, ntop = 1000, scale = TRUE){
   # count values for gene_by_sample
   # metadata rows must match columns of gene_by_sample
@@ -27,179 +25,55 @@ do_pca <- function(gene_by_sample, meta, ntop = 1000, scale = TRUE){
   if (scale){
     gene_by_sample <- scale(gene_by_sample)
   }
+  # remove RPL/RPS/MT genes from consideration 
+  keep_genes <- grep('^RPS|^RPL|^MT-|^MPRS|^MPRL',row.names(gene_by_sample),value = TRUE, invert = TRUE)
+  gene_by_sample <- gene_by_sample[keep_genes,]
   Pvars <- rowVars(log2(gene_by_sample+1))
   select <- order(Pvars, decreasing = TRUE)[seq_len(min(ntop, 
                                                         length(Pvars)))]
-  PCA <- prcomp(t(log2(gene_by_sample[select, ]+1)), scale = FALSE, center = FALSE)
+  PCA <- prcomp(t(log2(gene_by_sample[select, ]+1)), scale = FALSE)
   percentVar <- round(100*PCA$sdev^2/sum(PCA$sdev^2),1)
   
   dataGG = cbind(PCA$x, meta)
-  out <- list(PCA, dataGG, percentVar, select)
+  gene_names = PCA$rotation %>% rownames()
+  out <- list(PCA, dataGG, percentVar, select, gene_names)
   out
 }
-
-dist_processor <- function(samples_as_row_matrix, metadata){
-  # row.names must be given that match `sample_accession` in metadata
-  # matrix should be log2 (or whatever) normalized
-  #euc_dist <- dist(t(log2(TPMall[select,]+1)), method = 'euclidean')
-  if ((nrow(metadata) != nrow(samples_as_row_matrix))){
-    stop("Matrix row num != metadata row num!")
-  }
-  if (metadata$sample_accession != row.names(samples_as_row_matrix)){
-    stop("Matrix row names != metadata row names!")
-  }
-  euc_dist <- dist(samples_as_row_matrix, method = 'euclidean')
-  euc_dist <- as.matrix(euc_dist)
-  
-  # metadata:
-  # metadata %>% select(sample_accession, BioSample, study_accession, Cohort, Tissue,  Sub_Tissue, Source, Age) %>% unique()
-  xy <- t(combn(colnames(euc_dist), 2))
-  euc_dist_long <- data.frame(xy, dist=euc_dist[xy])
-  colnames(euc_dist_long) <- c('sample_accession', 'against', 'dist')
-  euc_dist_long_meta <- euc_dist_long %>% 
-    left_join(metadata, by = 'sample_accession')
-  euc_dist_long_meta
-}
-
-# http://duffel.rail.bio/recount3/human/new_annotations/gene_sums/human.gene_sums.G029.gtf.gz
-gene_annotations <- 
-  rtracklayer::import("../data/pca_data/human.gene_sums.G029.gtf.gz") %>% 
-  as.data.frame()
-
-pc_ensgene <- gene_annotations %>% filter(gene_type == 'protein_coding') %>% pull(gene_id) %>% gsub('\\.\\d+$','',.)
-pc_gene_name <- gene_annotations %>% filter(gene_type == 'protein_coding') %>% pull(gene_name) 
-pc_gene_full <- paste0(pc_gene_name, ' (', pc_ensgene, ')')
 ```
-
-# Run PCA 
-
-On **count** data which I have setup from (sc)EiaD resources in scripts/pca_workup_data_prep.R 
-
 
 ```{r}
 ##################################################
 # PCA time
 
-# Keep only protein-coding genes
-mat_all_pc <- mat_all[rownames(mat_all) %in% pc_gene_full,]
+# all minus swaroop AMD
+eyeIntegration_2023_pca <- do_pca(mat_all[,(meta_mat_all %>% filter(!grepl("AMD", Perturbation)) %>% pull(sample_accession))], meta_mat_all %>% filter(!grepl("AMD", Perturbation)))
 
-# all samples minus scRNA with only protein coding genes
-bulk_out <- do_pca(mat_all_pc[,(meta_mat_all %>% filter(Source != 'scRNA') %>% pull(sample_accession))], meta_mat_all %>% filter(Source != 'scRNA') )
+# Making files to load into eyeIntegration app
 
-PCA <- bulk_out[[1]]
-dataGG <- bulk_out[[2]]
-percentVar <- bulk_out[[3]]
-select <- bulk_out[[4]]
-
-# dist by PCA
-pca_mat <- PCA$x[,1:2]
-row.names(pca_mat) <- meta_mat_all %>% filter(Source != 'scRNA') %>% pull(sample_accession)
-pca_dist <- dist_processor(pca_mat, meta_mat_all %>% filter(Source != 'scRNA'))
-
-# Grouping GTEx Data for downstream calculations
-dataGG_GTEx <- dataGG %>% mutate(Sub_Tissue = ifelse(Cohort == "Body", paste0(Tissue, " - ", Sub_Tissue), Sub_Tissue))
-dataGG_GTEx <- within(dataGG_GTEx, Tissue[Cohort == "Body"] <- "GTEx")
+save(eyeIntegration_2023_pca, file = "../data/pca_data/eyeIntegration_2023_pca.RData")
 ```
 
-```{r}
-# PCA based metadata
-
-pca_dist_metadata <-
-  pca_dist %>%
-  # metadata for the "against" sample
-  left_join(emeta %>% dplyr::select(sample_accession, 
-                                    study_accession2 = study_accession, 
-                                    Tissue2 = Tissue,
-                                    Cohort2 = Cohort) %>% unique(), 
-            by = c('against' = 'sample_accession')) %>% 
-  filter(study_accession != study_accession2, 
-         study_accession != 'SRP273695', # incorrectly labeled samples
-         sample_accession != against,
-         #study_accession2 != 'SRP273695',
-         Cohort == 'Eye', 
-         Cohort2 == 'Eye') %>% 
-  as_tibble() %>% 
-  group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age) %>% 
-  slice_min(n = 20, order_by = dist) %>%
-  ungroup() %>% 
-  group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age, Tissue2) %>% 
-  summarise(Count = n()) %>% 
-  mutate(Tissue3 = paste0(Tissue2, ' (', Count,')')) %>% 
-  summarise(Count = sum(Count[Tissue != Tissue2]),
-            Tissue2 = paste(Tissue3, collapse = ',') )
-
-pca_dist_metadata_with_GTEx <-
-  pca_dist %>%
-  # metadata for the "against" sample
-  left_join(emeta %>% dplyr::select(sample_accession, 
-                                    study_accession2 = study_accession, 
-                                    Tissue2 = Tissue,
-                                    Cohort2 = Cohort) %>% unique(), 
-            by = c('against' = 'sample_accession')) %>% 
-  filter(study_accession != study_accession2, 
-         study_accession != 'SRP273695', # incorrectly labeled samples
-         sample_accession != against,
-         #study_accession2 != 'SRP273695',
-         ) %>% 
-  as_tibble() %>% 
-  group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age) %>% 
-  slice_min(n = 20, order_by = dist) %>%
-  ungroup() %>% 
-  group_by(sample_accession, study_accession, Tissue, Sub_Tissue, Source, Age, Tissue2) %>% 
-  summarise(Count = n()) %>% 
-  mutate(Tissue3 = paste0(Tissue2, ' (', Count,')')) %>% 
-  summarise(Count = sum(Count[Tissue != Tissue2]),
-            Tissue2 = paste(Tissue3, collapse = ',') )
-```
+#Plotting Examples
 
 ```{r}
-# Plotting Data for PCA output with distance values
-eye_pca_data <- dataGG %>% filter(sample_accession %in% pca_dist_metadata$sample_accession) %>%
-  left_join(pca_dist_metadata %>% ungroup() %>% 
-              select(-study_accession, -Tissue, -Sub_Tissue, -Source, -Age), by = c("sample_accession"))
+pcFirst <- "PC1"
+pcSecond <- "PC2"
 
-eye_pca_data_with_GTEx <- dataGG_GTEx %>% filter(sample_accession %in% pca_dist_metadata_with_GTEx$sample_accession) %>%
-  left_join(pca_dist_metadata_with_GTEx %>% ungroup() %>% 
-              select(-study_accession, -Tissue, -Sub_Tissue, -Source, -Age), by = c("sample_accession"))
-
-save(eye_pca_data, file = "../data/pca_data/eye_pca_data.RData")
-save(eye_pca_data_with_GTEx, file = "../data/pca_data/eye_pca_data_with_GTEx.RData")
-save(percentVar, file = "../data/pca_data/eye_percentVar_data.RData")
-```
-
-#Plotting
-
-```{r}
-pcFirst <- 'PC1'
-pcSecond <- 'PC2'
-
-ggplotly(eye_pca_data %>%
-  #filter(Source != 'scRNA') %>% 
-    as_tibble() %>%
-    ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
-    geom_point(size=3, aes(color=Tissue, shape = Source,
-                           text = paste(study_accession, "\n", sample_accession, "\n", Tissue, "\n",
-                                        Sub_Tissue, "\n", Source, "\n", Age, "\n",
-                                        Count, "\n", Tissue2))) +
-  xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
-  ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
+ggplotly(eyeIntegration_2023_pca_with_scRNA[[2]] %>%
+  filter(Source != "scRNA") %>% 
+  mutate(Sub_Tissue = ifelse(Cohort == "Body", paste0(Tissue, " - ", Sub_Tissue), Sub_Tissue)) %>%
+  mutate(Tissue = ifelse(Cohort == "Body", "GTEx", Tissue)) %>%
+  #mutate(Tissue = ifelse(Source == "scRNA", "Single Cell RNA Samples", Tissue)) %>% 
+  as_tibble() %>%
+  ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
+  geom_point(size=3, aes(color=Tissue, shape = Source,
+                         text = paste("Study: ", study_accession, "\n", "Sample: ", sample_accession, "\n",
+                                      "Tissue: ", Tissue, "\n", "Sub-Tissue: ", Sub_Tissue, "\n", "Source: ", 
+                                      Source, "\n", "Age: ", Age, "\n"))) +
+  xlab(paste0(pcFirst, ": ",eyeIntegration_2023_pca[[3]][str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
+  ylab(paste0(pcSecond, ": ",eyeIntegration_2023_pca[[3]][str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) +
   cowplot::theme_cowplot() +
-  scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
-  scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
-  scale_shape_manual(values = 0:10), tooltip = 'text')
-
-
-ggplotly(eye_pca_data_with_GTEx %>%
-  #filter(Source != 'scRNA') %>% 
-    as_tibble() %>%
-    ggplot(., aes(.data[[pcFirst]], .data[[pcSecond]])) +
-    geom_point(size=3, aes(color=Tissue, shape = Source,
-                           text = paste(study_accession, "\n", sample_accession, "\n", Tissue, "\n",
-                                        Sub_Tissue, "\n", Source, "\n", Age, "\n",
-                                        Count, "\n", Tissue2))) +
-  xlab(paste0(pcFirst, ": ",percentVar[str_extract(pcFirst, '\\d+') %>% as.integer()],"% variance")) +
-  ylab(paste0(pcSecond, ": ",percentVar[str_extract(pcSecond, '\\d+') %>% as.integer()],"% variance")) + 
-  cowplot::theme_cowplot() +
+  ggtitle(label = "Ocular and GTEx Sample PCA Visualization for the top 1000 protein coding genes in eyeIntegration") +
   scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
   scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
   scale_shape_manual(values = 0:10), tooltip = 'text')
