@@ -1,0 +1,193 @@
+---
+title: "DESeq2_eyeIntegration_Guide"
+author: "Prashit Parikh"
+date: "2023-03-30"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    theme: yeti
+    highlight: tango
+---
+
+```{=html}
+<style type="text/css">
+body {
+  font-family: 'Helvetica';
+  font-size: 16px;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-weight: bold;
+}
+code, pre {
+  font-family: 'Consolas', 'Lucida Console', monospace;
+  font-size: 14px;
+}
+</style>
+```
+
+## 1. Overview
+
+This guide will illustrate how you can perform differential gene expression analysis by integrating your locally processed data with RNA-seq data from the recount3 project and our Eye in a Disk (EiaD) database. For a full explanation of the recount3 package, please visit the [recount3 quick start guide here](https://bioconductor.org/packages/3.17/bioc/vignettes/recount3/inst/doc/recount3-quickstart.html#21_Installing_recount3){.uri}.
+
+We will begin by downloading and loading necessary packages for use throughout this tutorial:
+
+```{r}
+# # Install BiocManager for package installation assistance if it is not already available in the current R session
+# if (!requireNamespace("BiocManager", quietly = TRUE)) {install.packages("BiocManager")}
+# 
+# # The following packages will be used throughout this tutorial for data manipulation
+# BiocManager::install("tidyverse")
+# BiocManager::install("tibble")
+# BiocManager::install("data.table")
+# Load packages
+library(tidyverse)
+library(tibble)
+library(data.table)
+```
+
+## 2. Installation and Data Download
+
+recount3 data can be obtained from the recount3 package in R, which you can download following these steps in your R session:
+
+```{r}
+# # Install recount3
+# BiocManager::install("recount3")
+```
+
+For EiaD data, we need to download the EiaD_library, which is a recount3 library mirror containing all samples from the eyeIntegration web application, to our local machine. [The data library can be found here](https://hpc.nih.gov/~parikhpp/EiaD/EiaD_library.gz){.uri}. Following download, you must unzip the data directory prior to use with recount3 compatible functions.
+
+## 3. Quick Start
+
+Now that both the recount3 and EiaD data has been downloaded, we can prepare for differential gene expressoin analysis:
+
+### 3.1.A. Creating a RangedSummarizedExperiment (rse) Object for recount3 data
+
+Loading the recount3 package will load necessary dependencies and functions required for use in preparing our data for downstream analysis. We will begin by creating an rse object, which enables access to the gene level expression data from recount3.
+
+```{r}
+# Load the recount3 package
+library(recount3)
+
+# Find all available human projects in the recount3 database
+human_projects <- available_projects()
+
+# Locate your project of interest. Here we use SRP053034 as an example.
+proj_info_SRP053034 <- subset(human_projects,
+                    project == "SRP053034" & project_type == "data_sources")
+
+# Create rse object using the gencode v29 annotation
+rse_gene_SRP053034 <- create_rse(proj_info_SRP053034, annotation = "gencode_v29")
+```
+
+This process can be repeated for each study you would like to pull from recount3
+
+### 3.1.B. Creating a RangedSummarizedExperiment (rse) Object for EiaD data
+
+This time we will utilize the same create_rse_manual function using the EiaD library mirror for recount3.
+
+```{r}
+# Locate your project of interest. Here we use ERP126780 as an example.
+rse_gene_ERP126780 <- create_rse_manual("ERP126780", recount3_url = "/Users/parikhpp/git/differential_expression/data/rse", annotation = "gencode_v29")
+```
+
+This same process can be used if you have your own recount3 library mirror. Simply replace the path of the EiaD library you downloaded with the path of your recount3 library mirror. More information about how to structure a recount3 library mirror can be found [here](https://www.bioconductor.org/packages/devel/bioc/vignettes/recount3/inst/doc/recount3-quickstart.html#413_Your_own_mirror){.uri}.
+
+Now that we have learned how to successfully create rse objects, we can prepare our data for differential gene expression analysis.
+
+## 4. Transforming and Combining Our Data to Obtain Raw Gene Counts for Use in DESeq2 Analysis
+
+Using our rse objects, we can obtain gene count data to be used directly in differential gene expression analysis. This process will be the same for EiaD, recount3, and locally processed samples which were produced using the [Monorail RNA-Seq Processing Pipeline](https://github.com/langmead-lab/monorail-external){.uri}.
+
+```{r}
+# Compute raw counts from rse and save them as a new attribute in the rse object
+
+# recount3 rse object
+assays(rse_gene_SRP053034)$raw_counts <- compute_read_counts(rse_gene_SRP053034)
+# EiaD rse object
+assays(rse_gene_ERP126780)$raw_counts <- compute_read_counts(rse_gene_ERP126780)
+
+# Combine all counts from rse objects
+DESeq_counts <- bind_cols(assays(rse_gene_SRP053034)$raw_counts, assays(rse_gene_ERP126780)$raw_counts)
+# Transform counts into matrix for use in differential expression analysis
+DESeq_counts <- DESeq_counts %>% as.matrix()
+```
+
+## 5. Extracting Metadata for Use in Differential Expression Analysis
+
+### 5.1.A. Importing Metadata for Samples Which Exist in EiaD
+
+We will pull the metadata for samples which exist in EiaD straight into R from the web. Then, using various functions from the tidyverse, we will extract the metadata for our samples of interest (SRP053034 and ERP126780).
+
+```{r}
+# Import the metadata
+EiaD_meta <- fread("https://hpc.nih.gov/~parikhpp/EiaD/eyeIntegration22_meta_2023_03_03.csv.gz")
+# Subset dataset to obtain desired project
+DESeq_meta <- EiaD_meta %>% filter(study_accession %in% c("SRP053034", "ERP126780"))
+```
+
+### 5.1.B. Finding Metadata for recount3 Exclusive Samples (not contained in EiaD) and Binding Them to Our Metadata for DESeq2 Analysis
+
+recount3 metadata is stored in the recount3 package, and can be extracted using the colData function from the recount3 package in R. We will use SRP134018 for this example:
+
+```{r}
+# # Locate your project of interest
+# rse_gene_SRP134018 <- subset(human_projects,
+#                     project == "SRP134018" & project_type == "data_sources")
+# 
+# # Create rse object using the gencode v29 annotation
+# rse_gene_SRP134018 <- create_rse(proj_info_SRP134018, annotation = "gencode_v29")
+# 
+# # Extracting metadata from our rse object
+# # Converting it to a dataframe
+# # Selecting to keep only those variables which align with the EiaD metadata
+# # Altering column names to allow for joining with the DESeq_meta produced from the EiaD metadata
+# SRP134018_meta <- colData(rse_gene_SRP134018) %>% as.data.frame() %>% 
+#   select(external_id, sra.sample_acc.x, study) %>% setnames(c("run_accession", "sample_accession", "study_accession"))
+# 
+# # Binding our recount3 exclusive metadata to the existing DESeq_meta, constructed in step 5.1.A from samples which are included in EiaD
+# DESeq_meta <- bind_rows(DESeq_meta, SRP134018_meta)
+```
+
+### 5.2 Ensuring Row Names for Metadata and Column Names for Gene Counts are in Alignment
+
+DESeq2 requires the columns of our input gene counts matrix to match the row names of our metadata. The following command ensures that this order is followed.
+
+```{r}
+DESeq_counts <- DESeq_counts[,DESeq_meta$run_accession]
+```
+
+### 5.3 What if I want to add metadata for samples I have locally processed?
+
+The best way to add this metadata would be to name the columns in alignment with the EiaD metadata, and then to use the bind_rows function in R to add this data to the pre-existing DESeq_meta data frame we have created in this tutorial.
+
+Note: This should be done prior to step 5.2 to ensure that the correct order is preserved when running differential expression analysis.
+
+## 6. Run DESeq2
+
+We will begin by downloading the DESeq2 R package and loading it into our current session.
+
+```{r}
+# # Install DESeq2
+# BiocManager::install("DESeq2")
+# Load DESeq2
+library(DESeq2)
+```
+
+Now we can utilize our prepared gene counts data and metadata to perform differential expression analysis:
+
+More information about DESeq2 can be found [here](https://bioconductor.org/packages/release/bioc/html/DESeq2.html){.uri}.
+
+```{r}
+# Prepare data for DESeq analysis
+dds <- DESeqDataSetFromMatrix(countData = DESeq_counts,
+                              colData = DESeq_meta,
+                              design = ~ study_accession)
+# Run DESeq
+DESeq2Table <- DESeq(dds)
+# Create vst object from DESeq2Table
+vst <- varianceStabilizingTransformation(DESeq2Table)
+# Here the name of your vst object will be the gene names from our rse object we created earlier
+row.names(vst)=rse_gene_SRP053034 %>% names()
+```
