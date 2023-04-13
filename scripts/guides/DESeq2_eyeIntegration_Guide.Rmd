@@ -56,7 +56,7 @@ recount3 data can be obtained from the recount3 package in R, which you can down
 # BiocManager::install("recount3")
 ```
 
-For EiaD data, we need to download the EiaD_library, which is a recount3 library mirror containing all samples from the eyeIntegration web application, to our local machine. [The data library can be found here](https://hpc.nih.gov/~parikhpp/EiaD/EiaD_library.gz){.uri}. Following download, you must unzip the data directory prior to use with recount3 compatible functions.
+For EiaD data, we need to download the EiaD_library, which is a recount3 library mirror containing all samples from the eyeIntegration web application, to our local machine. [The data library can be found here](https://hpc.nih.gov/~parikhpp/EiaD/EiaD_library.tar.gz){.uri}. Following download, you must unzip the data directory prior to use with recount3 compatible functions.
 
 ## 3. Quick Start
 
