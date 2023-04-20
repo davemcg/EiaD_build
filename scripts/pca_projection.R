@@ -3,16 +3,26 @@ load('../data/EiaD_pca_analysis.Rdata')
 library(tidyverse)
 library(matrixStats)
 
+<<<<<<< HEAD
 do_pca <- function(gene_by_sample, meta, ntop = 1000){
+=======
+do_pca <- function(gene_by_sample, meta, ntop = 1000, scale = TRUE){
+>>>>>>> 3dfd1666a77e30524b9d6660411a111c6bcc79bb
   # count values for gene_by_sample
   # metadata rows must match columns of gene_by_sample
   # quick checker for data mismatch
   if (!(colnames(gene_by_sample) == meta$sample_accession) %>% sum() == ncol(gene_by_sample)){
     stop("Check metadata and matrix samples name matching")
   }
+<<<<<<< HEAD
   
   gene_by_sample <- scale(gene_by_sample)
   gene_by_sample <- log1p(gene_by_sample)
+=======
+  if (scale){
+    gene_by_sample <- scale(gene_by_sample)
+  }
+>>>>>>> 3dfd1666a77e30524b9d6660411a111c6bcc79bb
   # remove RPL/RPS/MT genes from consideration 
   keep_genes <- grep('^RPS|^RPL|^MT-|^MPRS|^MPRL',row.names(gene_by_sample),value = TRUE, invert = TRUE)
   gene_by_sample <- gene_by_sample[keep_genes,]
@@ -32,7 +42,11 @@ do_pca <- function(gene_by_sample, meta, ntop = 1000){
 PCA_object <- do_pca(mat_all[,(meta_mat_all %>% filter(!grepl("AMD", Perturbation)) %>% pull(sample_accession))], meta_mat_all %>% filter(!grepl("AMD", Perturbation)) )
 PCA <- PCA_object[[1]]
 
+<<<<<<< HEAD
 tic()
+=======
+
+>>>>>>> 3dfd1666a77e30524b9d6660411a111c6bcc79bb
 new_input_data <- data.table::fread('~/Desktop/test.csv.gz')
 # turn into matrix
 raw_matrix <- new_input_data[,-1] %>% as.matrix()
@@ -93,9 +107,15 @@ projected_input <- log2(scaled_rotate + 1) %*% PCA$rotation %>% as.data.frame()
 
 ########## merge all data
 pca_projected_merge <- bind_rows(PCA_object[[2]] %>% mutate(Data = 'EiaD'),
+<<<<<<< HEAD
                                  projected_input %>% mutate(Data = 'input$user_given_input_project_name'))
 
 toc()
+=======
+                                 projected_input %>% mutate(Data = input$user_given_input_project_name))
+
+
+>>>>>>> 3dfd1666a77e30524b9d6660411a111c6bcc79bb
 # facet plot
 pca_projected_merge %>% ggplot(aes(x=PC1,y=PC2)) + geom_point() + facet_wrap(~Data)
 # color plot for outside
