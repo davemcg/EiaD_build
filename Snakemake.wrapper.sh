@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# to run snakemake as batch job
 # run in the data folder for this project
-
-module load snakemake/5.1.3 || exit 1
+# on biowulf2:
+# /data/mcgaugheyd/projects/nei/brooks/oca_rna-seq
 
 mkdir -p 00log
+
+#module load snakemake || exit 1
 
 sbcmd="sbatch --cpus-per-task={threads} \
 --mem={cluster.mem} \
@@ -16,14 +17,10 @@ sbcmd="sbatch --cpus-per-task={threads} \
 {cluster.extra}"
 
 
-snakefile=$1
-config_yaml=$2
-cluster_json=$3
-
-snakemake -s $snakefile \
--pr --local-cores 2 --jobs 1999 \
---configfile $config_yaml \
---cluster-config $cluster_json \
---cluster "$sbcmd"  --latency-wait 120  \
--k --restart-times 0
-
+snakemake -s /home/mcgaugheyd/git/EiaD_build/Snakefile \
+  -pr --local-cores 2 --jobs 500 \
+  --cluster-config /home/mcgaugheyd/git/EiaD_build/cluster.json \
+  --cluster "$sbcmd"  --latency-wait 120 --rerun-incomplete \
+  --configfile $1 --use-conda \
+  -k --restart-times 0 \
+  --resources parallel=4 
