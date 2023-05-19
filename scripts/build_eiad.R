@@ -99,11 +99,8 @@ db_create_index(gene_pool_2023, 'lsTPM_tx', 'ID')
 #dbWriteTable(gene_pool_2023, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
 #db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
 
-dbWriteTable(gene_pool_2023, 'gene_IDs', gene_annotation %>% filter(gene_id %in% genes_above_zero) %>% rename(Gene = 'ID'), row.names = FALSE, overwrite = TRUE)
+dbWriteTable(gene_pool_2023, 'gene_IDs', gene_IDs, row.names = FALSE, overwrite = TRUE)
 db_create_index(gene_pool_2023, 'gene_IDs', 'ID')
-
-dbWriteTable(gene_pool_2023, 'tx_IDs', tx_annotation %>% filter(transcript_id %in% tx_above_zero) %>% rename(Transcript = 'ID'), row.names = FALSE, overwrite = TRUE)
-db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
 
 dbWriteTable(gene_pool_2023, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
