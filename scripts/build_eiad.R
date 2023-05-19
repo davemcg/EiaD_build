@@ -1,6 +1,6 @@
 library(RSQLite)
 library(tidyverse)
-library(dplyr)
+library(dbplyr)
 library(readr)
 library(rtracklayer)
 library(dtplyr)
@@ -101,16 +101,12 @@ db_create_index(gene_pool_2023, 'lsTPM_gene', 'ID')
 
 dbWriteTable(gene_pool_2023, 'lsTPM_tx', TPM_tx, row.names = FALSE, overwrite = TRUE)
 db_create_index(gene_pool_2023, 'lsTPM_tx', 'ID')
-#dbWriteTable(gene_pool_2023, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
-#db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
 
 dbWriteTable(gene_pool_2023, 'gene_IDs', gene_annotation %>% filter(Gene%in% genes_above_zero) %>% rename(Gene = 'ID'), row.names = FALSE, overwrite = TRUE)
 db_create_index(gene_pool_2023, 'gene_IDs', 'ID')
 
 dbWriteTable(gene_pool_2023, 'tx_IDs', tx_annotation %>% filter(Transcript %in% tx_above_zero) %>% rename(Transcript = 'ID'), row.names = FALSE, overwrite = TRUE)
 db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
-
-
 
 dbWriteTable(gene_pool_2023, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
