@@ -65,11 +65,11 @@ SALMON_QUANT_OUTPUT = ['salmon_quant/' + sample + '/quant.sf'  \
 	for sample in sample_files] 
 	
 
-localrules: all
+localrules: all, print_quants
 
 rule all:
 	input:
-		SALMON_QUANT_OUTPUT
+		'salmon_quant_output.tsv'
 
 rule aggregate_fq:
 	# merge run level files to the sample level
@@ -141,3 +141,11 @@ rule salmon_quant:
 			-o {params.dir}
 		""" 
 
+rule print_quants:
+	input:
+		SALMON_QUANT_OUTPUT
+	output:
+		'salmon_quant_output.tsv'
+	run:
+		with open(output[0], 'w') as f:
+			f.write('\n'.join(str(quant) for quant in input))
