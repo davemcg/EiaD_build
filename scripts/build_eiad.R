@@ -14,11 +14,6 @@ eyeIntegration23 <- data.table::fread("~/git/EiaD_build/data/eyeIntegration22_me
   mutate(Perturbation = case_when(grepl('MGS', Source_details) ~ Source_details %>% gsub('Adult Tissue ', '', .))) 
 gene_counts <- vroom::vroom("counts/gene_tpm.csv.gz") %>% data.table::as.data.table()
 tx_counts <- vroom::vroom("counts/tx_tpm.csv.gz") %>% data.table::as.data.table()
-############ load count matrix to ID zero count genes#
-count_matrix <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.table::as.data.table()
-genes_above_zero <- count_matrix$Gene[rowSums(count_matrix[,2:ncol(count_matrix)]) > 0]
-tx_matrix <- vroom::vroom("counts/tx_counts.csv.gz") %>% data.table::as.data.table()
-tx_above_zero <- tx_matrix$Transcript[rowSums(tx_matrix[,2:ncol(tx_matrix)]) > 0]
 #####################################################
 mapping_data <- vroom::vroom("run_meta.csv.gz") %>% mutate(sample_accession = gsub('salmon_quant\\/|\\/aux_info\\/meta_info.json','',log)) %>% relocate(sample_accession) %>% select(-log)
 
@@ -38,6 +33,16 @@ gene_names <- gene_annotation %>% select(Gene) %>% unique()
 
 tx_annotation <-  full_annotations %>% select(Transcript, gene_symbol, transcript_id, transcript_biotype, description) %>% unique()
 tx_names <- tx_annotation %>% select(Transcript)
+
+
+############ load count matrix to ID zero count genes#
+count_matrix <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.table::as.data.table()
+genes_above_zero <- count_matrix$Gene[rowSums(count_matrix[,2:ncol(count_matrix)]) > 0]
+tx_matrix <- vroom::vroom("counts/tx_counts.csv.gz") %>% data.table::as.data.table()
+# transform tx ids into the gene (ens tx) format
+tx_counts$Transcript <- tx_counts %>% select(Transcript) %>% left_join(tx_annotation, by = c("Transcript" = 'transcript_id')) %>% as_tibble() %>% pull(Transcript.y)
+tx_matrix$Transcript <- tx_matrix %>% select(Transcript) %>% left_join(tx_annotation, by = c("Transcript" = 'transcript_id')) %>% as_tibble() %>% pull(Transcript.y)
+tx_above_zero <- tx_matrix$Transcript[rowSums(tx_matrix[,2:ncol(tx_matrix)]) > 0]
 
 
 # make counts long 
@@ -99,8 +104,13 @@ db_create_index(gene_pool_2023, 'lsTPM_tx', 'ID')
 #dbWriteTable(gene_pool_2023, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
 #db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
 
-dbWriteTable(gene_pool_2023, 'gene_IDs', gene_IDs, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(gene_pool_2023, 'gene_IDs', gene_annotation %>% filter(Gene%in% genes_above_zero) %>% rename(Gene = 'ID'), row.names = FALSE, overwrite = TRUE)
 db_create_index(gene_pool_2023, 'gene_IDs', 'ID')
+
+dbWriteTable(gene_pool_2023, 'tx_IDs', tx_annotation %>% filter(Transcript %in% tx_above_zero) %>% rename(Gene = 'ID'), row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
+
+
 
 dbWriteTable(gene_pool_2023, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
