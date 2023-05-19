@@ -1,108 +1,111 @@
 library(RSQLite)
 library(tidyverse)
-library(pool)
 library(dplyr)
 library(readr)
 library(rtracklayer)
 library(dtplyr)
+library(Biostrings)
 
-
-#Initialize gene_pool
-gene_pool_2022 <- dbConnect(RSQLite::SQLite(), dbname = "~/git/eyeIntegration_app/inst/app/www/2022/eyeIntegration_2022_human.sqlite")
+gene_pool_2023 <- dbConnect(RSQLite::SQLite(), dbname = "eyeIntegration_2023_human.sqlite")
 
 #Load necessary files
-eyeIntegration22 <- data.table::fread("data/eyeIntegration22_meta_2023_03_03.csv.gz") %>% 
+eyeIntegration23 <- data.table::fread("~/git/EiaD_build/data/eyeIntegration22_meta_2023_03_03.csv.gz") %>% 
   as_tibble() %>% 
   mutate(Perturbation = case_when(grepl('MGS', Source_details) ~ Source_details %>% gsub('Adult Tissue ', '', .))) 
-gene_counts <- vroom::vroom("gene_counts/gene_TPM.csv.gz") %>% data.table::as.data.table()
+gene_counts <- vroom::vroom("counts/gene_tpm.csv.gz") %>% data.table::as.data.table()
+tx_counts <- vroom::vroom("counts/tx_tpm.csv.gz") %>% data.table::as.data.table()
 ############ load count matrix to ID zero count genes#
-count_matrix <- vroom::vroom("gene_counts/gene_counts_matrix.csv.gz") %>% data.table::as.data.table()
-genes_above_zero <- count_matrix$gene_id[rowSums(count_matrix[,2:ncol(count_matrix)]) > 0]
+count_matrix <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.table::as.data.table()
+genes_above_zero <- count_matrix$Gene[rowSums(count_matrix[,2:ncol(count_matrix)]) > 0]
+tx_matrix <- vroom::vroom("counts/tx_counts.csv.gz") %>% data.table::as.data.table()
+tx_above_zero <- tx_matrix$Transcript[rowSums(tx_matrix[,2:ncol(tx_matrix)]) > 0]
 #####################################################
-mapping_data <- bind_rows(vroom::vroom("mapping_data/recount3_mapping_information.csv.gz"),
-                            vroom::vroom("mapping_data/local_mapping_information.csv.gz"),
-                          vroom::vroom("mapping_data/gtex_mapping_information.csv.gz")) %>% 
-  filter(sra.sample_acc.x %in% eyeIntegration22$sample_accession)
-# http://duffel.rail.bio/recount3/human/new_annotations/gene_sums/human.gene_sums.G029.gtf.gz
-gene_annotations <- 
-  rtracklayer::import("data/human.gene_sums.G029.gtf.gz") %>% 
-  as.data.frame()
-# http://duffel.rail.bio/recount3/human/new_annotations/exon_sums/human.exon_sums.G029.gtf.gz
-exon_annotations <- 
-  rtracklayer::import("data/human.exon_sums.G029.gtf.gz") %>% 
-  as.data.frame()
+mapping_data <- vroom::vroom("run_meta.csv.gz") %>% mutate(sample_accession = gsub('salmon_quant\\/|\\/aux_info\\/meta_info.json','',log)) %>% relocate(sample_accession) %>% select(-log)
 
-#Dropping duplicate colnames prior to left_join
-exon_annotations <- exon_annotations %>% 
-  select(-c(seqnames, strand, phase, gene_name, tag, start, source, level, end, type, havana_gene, width, score, gene_type)) %>% 
-  unique()
-gene_data <- gene_annotations %>% left_join(exon_annotations, by="gene_id")
-gene_names <- gene_data %>% select(gene_id, gene_name) %>% unique()
+full_annotations <- readDNAStringSet("default/gentrome.fa") %>% names() %>% enframe()
+full_annotations <- full_annotations %>%
+            mutate(gene_symbol = str_extract(value, 'gene_symbol:\\w+') %>% gsub(".*:","",.),
+                   transcript_id = str_extract(value, 'ENST\\d+\\.\\d+'),
+                   gene_id = str_extract(value, 'ENSG\\d+\\.\\d+'),
+                   gene_biotype = str_extract(value, 'gene_biotype:\\w+') %>% gsub(".*:","",.),
+                   transcript_biotype = str_extract(value, 'transcript_biotype:\\w+') %>% gsub(".*:","",.),
+                   description = str_extract(value, "description:.*")) %>%
+            mutate(Gene = paste0(gene_symbol, ' (', gene_id, ')'),
+				   Transcript = paste0(gene_symbol, ' (', transcript_id, ')'))
 
-#Left_joining gene_name to gene_counts
-# using data.table for speed
-gc_list <- list()
-for (i in gene_counts$sample_accession %>% unique()){
-  print(i)
-  gc <- gene_counts[sample_accession == i]
-  gc[gene_names, on = 'gene_id', gene_name := i.gene_name]
+gene_annotation <- full_annotations %>% select(Gene, gene_symbol, gene_id, gene_biotype, description) %>% unique()
+gene_names <- gene_annotation %>% select(Gene) %>% unique()
 
-  gc_list[[i]] <- gc %>% collect()
-  if (grepl('^\\d+', i)){
-    # prepend X to start digit samples
-    new_sample <- paste0('X',i)
-    print(paste("New name: ", new_sample))
-    gc_list[[i]]$sample_accession <- new_sample
-  }
-}
+tx_annotation <-  full_annotations %>% select(Transcript, gene_symbol, transcript_id, transcript_biotype, description) %>% unique()
+tx_names <- tx_annotation %>% select(Transcript)
 
 
-gene_counts_with_name <- bind_rows(gc_list)
-
-#make gene ID df
-gene_IDs <- gene_data %>% dplyr::select(gene_id, gene_name, gene_type) %>% 
-  filter(gene_id %in% genes_above_zero) %>% 
-  mutate(ID = paste0(gene_name, ' (', gene_id, ')')) %>% select(-gene_name, -gene_id) %>% 
-  arrange(ID) %>% 
-  unique()
-
-# #make tx ID df
-# gene_data <- gene_data %>% mutate(tx_name = paste(gene_data$transcript_name, paste("(", gene_data$transcript_id, ")", sep="")))
-# tx_IDs <- gene_data %>% dplyr::select(tx_name, transcript_type) %>% arrange(tx_name) %>% unique()
-# names(tx_IDs) <- c("ID", "transcript_type")
-
-#Create lsTPM_gene to obtain mean_rank_deciles for genes by sub_tissue
-#names(gene_counts_with_name) <- c("gene_id", "sample_accession", "value", "ID")
-lsTPM_gene <- gene_counts_with_name %>% mutate(ID = paste0(gene_name, ' (', gene_id, ')')) %>% select(-gene_name, -gene_id) %>% 
-  collect()
-
+# make counts long 
+TPM_gene <- gene_counts %>%
+  filter(Gene %in% genes_above_zero)  %>%
+  pivot_longer(-Gene, names_to = 'sample_accession') %>%
+  collect() %>%
+  rename(Gene = 'ID')
+TPM_tx <- tx_counts %>%
+  filter(Transcript %in% tx_above_zero)  %>%
+  pivot_longer(-Transcript, names_to = 'sample_accession') %>%
+  collect() %>% 
+  rename(Transcript = 'ID')
 #Calculating Mean Rank Decile
-mean_rank_decile <- lsTPM_gene %>% 
-  left_join(., eyeIntegration22, by = "sample_accession") %>% 
+mean_rank_decile_gene <- TPM_gene %>% 
+  left_join(., eyeIntegration23 %>% 
+				dplyr::select(Tissue, Sub_Tissue, Source, Perturbation, Age, sample_accession) %>%
+				unique(), 
+		       by = "sample_accession") %>% 
   dplyr::select(Tissue, Sub_Tissue, Source, Perturbation, Age, sample_accession, ID, value ) %>% 
   group_by(Tissue, Sub_Tissue, Source, Perturbation, Age, ID) %>% summarise(meanlsTPM = mean(value)) %>% 
   mutate(Rank = rank(-meanlsTPM, ties.method='first'), Decile = ntile(meanlsTPM, n = 10)) %>% 
   arrange(Tissue, Rank) %>% 
-  collect()
+  collect() 
+
+mean_rank_decile_tx <- TPM_tx %>%
+  left_join(., eyeIntegration23 %>%
+                dplyr::select(Tissue, Sub_Tissue, Source, Perturbation, Age, sample_accession) %>%
+                unique(),
+               by = "sample_accession") %>%
+  dplyr::select(Tissue, Sub_Tissue, Source, Perturbation, Age, sample_accession, ID, value ) %>%
+  group_by(Tissue, Sub_Tissue, Source, Perturbation, Age,ID) %>% summarise(meanlsTPM = mean(value)) %>%
+  mutate(Rank = rank(-meanlsTPM, ties.method='first'), Decile = ntile(meanlsTPM, n = 10)) %>%
+  arrange(Tissue, Rank) %>%
+  collect() 
 
 #Writing the tables
-dbWriteTable(gene_pool_2022, 'mean_rank_decile_gene', mean_rank_decile, row.names = FALSE, overwrite = TRUE)
-db_create_index(gene_pool_2022,'mean_rank_decile_gene', 'ID')
+dbWriteTable(gene_pool_2023, 'mean_rank_decile_gene', mean_rank_decile_gene, row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023,'mean_rank_decile_gene', 'ID')
 
-dbWriteTable(gene_pool_2022, 'mapping_information', mapping_data, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(gene_pool_2023, 'mean_rank_decile_tx', mean_rank_decile_tx, row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023,'mean_rank_decile_tx', 'ID')
 
-dbWriteTable(gene_pool_2022, 'metadata', eyeIntegration22, row.names = FALSE, overwrite = TRUE)
+dbWriteTable(gene_pool_2023, 'mapping_information', mapping_data, row.names = FALSE, overwrite = TRUE)
 
-dbWriteTable(gene_pool_2022, 'lsTPM_gene', lsTPM_gene, row.names = FALSE, overwrite = TRUE)
-db_create_index(gene_pool_2022, 'lsTPM_gene', 'ID')
+dbWriteTable(gene_pool_2023, 'metadata', eyeIntegration23 %>%
+											dplyr::select(Tissue, Sub_Tissue, Source, Perturbation, 
+														  Age, sample_accession, Cohort,region, study_title, 
+														  study_abstract, sample_attribute, BioSample, 
+														  Source_details, Library_Notes, Comment, Origin, 
+															Sample_comment, geo) %>% unique(), 
+					row.names = FALSE, overwrite = TRUE)
 
-#dbWriteTable(gene_pool_2022, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
-#db_create_index(gene_pool_2022, 'tx_IDs', 'ID')
+dbWriteTable(gene_pool_2023, 'lsTPM_gene', TPM_gene, row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023, 'lsTPM_gene', 'ID')
 
-dbWriteTable(gene_pool_2022, 'gene_IDs', gene_IDs, row.names = FALSE, overwrite = TRUE)
-db_create_index(gene_pool_2022, 'gene_IDs', 'ID')
+dbWriteTable(gene_pool_2023, 'lsTPM_tx', TPM_tx, row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023, 'lsTPM_tx', 'ID')
+#dbWriteTable(gene_pool_2023, 'tx_IDs', tx_IDs, row.names = FALSE, overwrite = TRUE)
+#db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
 
-dbWriteTable(gene_pool_2022, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
+dbWriteTable(gene_pool_2023, 'gene_IDs', gene_annotation %>% filter(gene_id %in% genes_above_zero) %>% rename(Gene = 'ID'), row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023, 'gene_IDs', 'ID')
+
+dbWriteTable(gene_pool_2023, 'tx_IDs', tx_annotation %>% filter(transcript_id %in% tx_above_zero) %>% rename(Transcript = 'ID'), row.names = FALSE, overwrite = TRUE)
+db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
+
+dbWriteTable(gene_pool_2023, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
 
 
@@ -179,4 +182,4 @@ dbWriteTable(scEiaD_pool, 'Date_DB_Created', Sys.Date() %>% as.character() %>% e
 
 # disconnect pools
 dbDisconnect(scEiaD_pool)
-dbDisconnect(gene_pool_2022)
+dbDisconnect(gene_pool_2023)
