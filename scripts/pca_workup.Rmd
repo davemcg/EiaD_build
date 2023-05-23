@@ -74,7 +74,7 @@ eye_out <- do_pca(mat_all_eye,
 # select <- out[[4]]
 
 # all (including scRNA data scEiaD/plae)
-all_out <- do_pca(mat_all,meta_mat_all)
+#all_out <- do_pca(mat_all,meta_mat_all)
 # PCA <- out[[1]]
 # dataGG <- out[[2]]
 # percentVar <- out[[3]]
@@ -82,7 +82,7 @@ all_out <- do_pca(mat_all,meta_mat_all)
 
 # all minus scRNA
 # all
-bulk_out <- do_pca(mat_all[,(meta_mat_all %>% filter(Source != 'scRNA') %>% pull(sample_accession))], meta_mat_all %>% filter(Source != 'scRNA') )
+#bulk_out <- do_pca(mat_all[,(meta_mat_all %>% filter(Source != 'scRNA') %>% #pull(sample_accession))], meta_mat_all %>% filter(Source != 'scRNA') )
 
 # all minus swaroop AMD
 noAMD_out <- do_pca(mat_all[,(meta_mat_all %>% filter(!grepl("AMD", Perturbation)) %>% pull(sample_accession))], meta_mat_all %>% filter(!grepl("AMD", Perturbation)) )
