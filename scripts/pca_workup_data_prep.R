@@ -10,37 +10,42 @@ emeta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% a
 # Load in counts
 # samples are columns
 # genes are rows
-mat <- vroom::vroom("gene_counts/gene_counts_matrix.csv.gz") %>% data.frame()
+mat <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.frame()
+mat2 <- mat %>% filter(grepl("ENSG", Gene)) %>% 
+  mutate(Gene = str_extract(Gene, 'ENSG\\d+')) %>% 
+  group_by(Gene) %>% 
+  summarise_all(sum)
+mat2 <- data.frame(mat2)
 ###################
 
 
 ######################
 # Light processing
 # set rownames and remove .digit at the end
-row.names(mat) <- mat[,1] %>% gsub('\\.\\d+','',.)
+row.names(mat2) <- mat2[,1] %>% str_extract(., 'ENSG\\d+')
 # remove gene column
-mat <- mat[,2:ncol(mat)]
+sample_mat <- mat2[,2:ncol(mat2)]
 ##########################
 
 
 ###########################
 # Align metadata to counts matrix
-gene_count_meta <- colnames(mat) %>% 
-  enframe(value = 'run_accession') %>% 
+gene_count_meta <- colnames(sample_mat) %>% 
+  enframe(value = 'sample_accession') %>% 
   left_join(emeta %>% as_tibble() %>% 
               # these fields create duplicated entries for the sort-of-odd GTEX metadata
-              dplyr::select(-sample_title, -gtex_sra_run_accession) %>% unique())
+              dplyr::select(-sample_title, -gtex_sra_run_accession, -run_accession) %>% unique())
 ##############################
 
-##############################
-# collapse technical replicates to the sample level
-library(DESeq2)
-dds <- DESeqDataSetFromMatrix(mat, gene_count_meta, design = ~ Tissue)
-dds <- collapseReplicates(dds, groupby = colData(dds)$sample_accession)
-
-# now extract the sample accession level counts
-sample_mat <- assay(dds, 'counts')
-# merge with TPMpb (pb is pseudoBulk)
+# ##############################
+# # collapse technical replicates to the sample level
+# library(DESeq2)
+# dds <- DESeqDataSetFromMatrix(mat, gene_count_meta, design = ~ Tissue)
+# dds <- collapseReplicates(dds, groupby = colData(dds)$sample_accession)
+# 
+# # now extract the sample accession level counts
+# sample_mat <- assay(dds, 'counts')
+# # merge with TPMpb (pb is pseudoBulk)
 
 # load in scRNA pseudobulk counts data from plae/scEiaD
 pb <- read_tsv('http://hpc.nih.gov/~mcgaugheyd/scEiaD/2022_03_22/4000-counts-universe-study_accession-scANVIprojection-15-5-20-50-0.1-CellType_predict-Homo_sapiens.Staged.pseudoCounts.tsv.gz') 
@@ -73,7 +78,7 @@ row.names(mat_all) <- row.names(mat_all) %>%
 ## also sc data
 meta_mat_all <- colnames(mat_all) %>% 
   enframe(value = 'sample_accession') %>% 
-  left_join(gene_count_meta %>% dplyr::select(-run_accession, -name)%>% dplyr::distinct(), by = 'sample_accession') %>% 
+  left_join(gene_count_meta %>% dplyr::select(-name)%>% dplyr::distinct(), by = 'sample_accession') %>% 
   # now label the scRNA pb cell types
   mutate(CellType = case_when(grepl('__', sample_accession) ~ str_extract(sample_accession, '__.*__') %>% gsub('__','',.)),
          Age = case_when(grepl('Matur', sample_accession) ~ 'Adult',
@@ -82,7 +87,7 @@ meta_mat_all <- colnames(mat_all) %>%
          Source = case_when(grepl('__', sample_accession) ~ 'scRNA',
                             TRUE ~ Source))
 #########################################
-save(meta_mat_all, mat_all, gene_annotations, file = 'data/EiaD_pca_analysis.Rdata')
-#write_csv(mat_all %>% as_tibble(rownames = 'Gene'), file = 'data/EiaD_pca_analysis_mat_all.csv.gz')
-#write_csv(meta_mat_all, file = 'data/EiaD_pca_analysis_meta_mat_all.csv.gz')
+save(meta_mat_all, mat_all, gene_annotations, file = 'data/EiaD_pca_analysis_2023.Rdata')
+write_csv(mat_all %>% as_tibble(rownames = 'Gene'), file = 'data/EiaD_pca_analysis_mat_all.csv.gz')
+write_csv(meta_mat_all, file = 'data/EiaD_pca_analysis_meta_mat_all.csv.gz')
 #########################################
