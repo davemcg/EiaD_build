@@ -8,7 +8,7 @@ library(matrixStats)
 meta <- read_csv("data/eyeIntegration22_meta_2023_03_03.csv.gz") %>% filter(Cohort == "Eye") %>% select(-run_accession) %>% unique()
 
 # load count data for eyeIntegration
-gene_counts <- fread("salmon_counts/gene_counts.csv.gz") %>%
+gene_counts <- fread("counts/gene_counts.csv.gz") %>%
   filter(!grepl("ENST", Gene)) %>% 
   mutate(Gene = gsub(" \\(.*","",Gene)) %>% 
   group_by(Gene) %>% 
