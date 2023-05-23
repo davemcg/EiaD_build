@@ -17,7 +17,7 @@ explosion <- pool %>% tbl('intron') %>% as_tibble() # only has one table
 ## also has junction_count and junction_coverage info
 ## needed for norm
 snap_samp <- read_tsv('~/data/eiad_rse/samples.tsv')
-emeta <- data.table::fread('data/eyeIntegration22_meta_2022_10_27.03.csv.gz') %>% as_tibble()
+emeta <- data.table::fread('~/git/EiaD_build/data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% as_tibble()
 
 # TPM norm
 # https://www.rna-seqblog.com/rpkm-fpkm-and-tpm-clearly-explained/
