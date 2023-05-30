@@ -79,17 +79,23 @@ eye_out <- do_pca(mat_all_eye,
 #bulk_out <- do_pca(mat_all[,(meta_mat_all %>% filter(Source != 'scRNA') %>% #pull(sample_accession))], meta_mat_all %>% filter(Source != 'scRNA') )
 
 # all minus swaroop AMD
-noAMD_out <- do_pca(mat_all[,(meta_mat_all %>% filter(!grepl("AMD", Perturbation)) %>% pull(sample_accession))], meta_mat_all %>% filter(!grepl("AMD", Perturbation)) )
+eyeIntegration_2023_pca <- do_pca(mat_all[,(meta_mat_all %>% filter(!grepl("AMD", Perturbation)) %>% pull(sample_accession))], meta_mat_all %>% filter(!grepl("AMD", Perturbation)) )
+```
+
+# Code to save PCA data for use in the eyeIntegration app
+
+```{r}
+#save(eyeIntegration_2023_pca, file = "../data/pca_data/eyeIntegration_2023_pca.RData")
 ```
 
 # Top level look
 
 ## PC1 and PC2
 ```{r, fig.width=12, fig.height=8}
-PCA <- noAMD_out[[1]]
-dataGG <- noAMD_out[[2]]
-percentVar <- noAMD_out[[3]]
-select <- noAMD_out[[4]]
+PCA <- eyeIntegration_2023_pca[[1]]
+dataGG <- eyeIntegration_2023_pca[[2]]
+percentVar <- eyeIntegration_2023_pca[[3]]
+select <- eyeIntegration_2023_pca[[4]]
 
 pcFirst <- 'PC1'
 pcSecond <- 'PC2'
@@ -125,7 +131,4 @@ dataGG %>%
   scale_color_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
   scale_fill_manual(values = c(pals::glasbey(), pals::alphabet2(), pals::alphabet2()) %>% unname()) +
   scale_shape_manual(values = 0:10) 
-
-
 ```
-
