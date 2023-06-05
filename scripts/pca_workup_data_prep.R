@@ -2,8 +2,11 @@
 library(tidyverse)
 
 ##################
+# Load in file containing samples to remove from PCA analysis
+excluded_samples <- scan("data/excluded_samples.txt", what = "character")
 # Load in metadata
-emeta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% as_tibble()
+emeta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% 
+  filter(!sample_accession %in% excluded_samples) %>% as_tibble()
 ##################
 
 ###################
@@ -11,6 +14,7 @@ emeta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% a
 # samples are columns
 # genes are rows
 mat <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.frame()
+mat <- mat[,(!colnames(mat) %in% excluded_samples)] # Subset to remove excluded samples
 mat2 <- mat %>% filter(grepl("ENSG", Gene)) %>% 
   mutate(Gene = str_extract(Gene, 'ENSG\\d+')) %>% 
   group_by(Gene) %>% 
