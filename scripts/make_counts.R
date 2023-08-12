@@ -4,9 +4,9 @@ library(data.table)
 library(tximport)
 library(Biostrings)
 
-args <- commandArgs(trailingOnly=TRUE)
+#args <- commandArgs(trailingOnly=TRUE)
 
-quant_files <- args[1]
+#quant_files <- args[1]
 files <- scan('salmon_quant_output.tsv', what = 'character')
 
 # process metadata

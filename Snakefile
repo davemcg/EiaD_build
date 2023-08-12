@@ -69,6 +69,7 @@ localrules: all, print_quants
 
 rule all:
 	input:
+		'counts/gene_counts.csv.gz',
 		'salmon_quant_output.tsv'
 
 rule aggregate_fq:
@@ -149,3 +150,13 @@ rule print_quants:
 	run:
 		with open(output[0], 'w') as f:
 			f.write('\n'.join(str(quant) for quant in input))
+
+rule make_counts:
+	input:
+		SALMON_QUANT_OUTPUT
+	output:
+		'counts/gene_counts.csv.gz'
+	shell:
+		"""
+		Rscript config['R_make_counts_path'] 
+		"""
