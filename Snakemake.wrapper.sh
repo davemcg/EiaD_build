@@ -19,6 +19,7 @@ sbcmd="sbatch --cpus-per-task={threads} \
 
 snakemake -s /home/mcgaugheyd/git/EiaD_build/Snakefile \
   -pr --local-cores 2 --jobs 500 \
+  --rerun-triggers mtime \
   --cluster-config /home/mcgaugheyd/git/EiaD_build/cluster.json \
   --cluster "$sbcmd"  --latency-wait 120 --rerun-incomplete \
   --configfile $1 --use-conda \

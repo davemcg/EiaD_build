@@ -153,10 +153,12 @@ rule print_quants:
 
 rule make_counts:
 	input:
-		SALMON_QUANT_OUTPUT
+		SALMON_QUANT_OUTPUT,
 	output:
 		'counts/gene_counts.csv.gz'
+	params: config['R_make_counts_path']
+	conda: 'eiad_rna_quant_r.yaml'
 	shell:
 		"""
-		Rscript config['R_make_counts_path'] 
+		Rscript {params}
 		"""

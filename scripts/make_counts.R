@@ -1,14 +1,16 @@
+print("go")
 library(tidyverse)
 library(rtracklayer)
 library(data.table)
 library(tximport)
 library(Biostrings)
-
+library(rjson)
+print("library load")
 #args <- commandArgs(trailingOnly=TRUE)
 
 #quant_files <- args[1]
 files <- scan('salmon_quant_output.tsv', what = 'character')
-
+print("load files")
 # process metadata
 log_files <- gsub('quant.sf', 'aux_info/meta_info.json', files)
 log_list <- map(log_files, function(x) fromJSON(file = x))
@@ -27,7 +29,7 @@ run_meta <- run_meta %>%
 					mapped = as.integer(mapped),
 					align_perc = mapped/processed) %>%
 			relocate(log, align_perc)
-
+print('two')
 # pull anno
 anno <- readDNAStringSet("default/gentrome.fa") %>% names() %>% enframe()
 anno2 <- anno %>% 

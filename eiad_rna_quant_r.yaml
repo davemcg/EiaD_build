@@ -1,0 +1,12 @@
+name: eiad_bulk_rna_quant
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - r-base=4.3
+  - r-tidyverse
+  - r-data.table
+  - bioconductor-rtracklayer
+  - bioconductor-tximport
+  - bioconductor-Biostrings
