@@ -1,6 +1,6 @@
 # PCA
 library(tidyverse)
-
+library(metamoRph)
 ##################
 # Load in file containing samples to remove from PCA analysis
 excluded_samples <- scan("data/excluded_samples.txt", what = "character")
@@ -17,9 +17,7 @@ mat <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.frame()
 mat <- mat[,(!colnames(mat) %in% excluded_samples)] # Subset to remove excluded samples
 mat2 <- mat %>% filter(grepl("ENSG", Gene)) %>% 
   mutate(Gene = str_extract(Gene, 'ENSG\\d+')) %>% 
-  group_by(Gene) %>% 
-  summarise_all(sum)
-mat2 <- data.frame(mat2)
+  data.frame()
 ###################
 
 
@@ -32,6 +30,10 @@ sample_mat <- mat2[,2:ncol(mat2)]
 ##########################
 
 
+
+
+
+
 ###########################
 # Align metadata to counts matrix
 gene_count_meta <- colnames(sample_mat) %>% 
@@ -40,6 +42,34 @@ gene_count_meta <- colnames(sample_mat) %>%
               # these fields create duplicated entries for the sort-of-odd GTEX metadata
               dplyr::select(-sample_title, -gtex_sra_run_accession, -run_accession) %>% unique())
 ##############################
+
+
+
+#################################
+# hard set samples for PCA
+# the hope is not have the change this much
+# but to simply project new data onto it
+set.seed(2023.08-16)
+core_set <- gene_count_meta %>% filter(Source == 'Native',
+                           Age == 'Adult') %>% 
+  group_by(Tissue) %>% 
+  sample_n(50, replace = TRUE) %>% 
+  unique() %>% 
+  pull(sample_accession)
+
+write(core_set, file  = '../data/core_pca_samples.txt')
+#####################################
+
+#########################################
+# run pca
+core_mat <- sample_mat[,core_set]
+gene_count_meta_core <- gene_count_meta %>% data.frame()
+row.names(gene_count_meta_core) <- gene_count_meta_core$sample_accession
+core_mm <- metamoRph::run_pca(core_mat, gene_count_meta_core[core_set,])
+
+
+#########################################
+
 
 # ##############################
 # # collapse technical replicates to the sample level
@@ -90,6 +120,7 @@ meta_mat_all <- colnames(mat_all) %>%
                          TRUE ~ Age),
          Source = case_when(grepl('__', sample_accession) ~ 'scRNA',
                             TRUE ~ Source))
+
 #########################################
 save(meta_mat_all, mat_all, gene_annotations, file = 'data/EiaD_pca_analysis_2023.Rdata')
 write_csv(mat_all %>% as_tibble(rownames = 'Gene'), file = 'data/EiaD_pca_analysis_mat_all.csv.gz')
