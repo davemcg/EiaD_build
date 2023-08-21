@@ -9,7 +9,8 @@ create_count_data_frames <-
            metadata,
            type = 'exon',
            empty_cache = TRUE,
-           GTEX = FALSE) {
+           GTEX = FALSE,
+           make_long = TRUE) {
     
     if (empty_cache){
       print("Clearing recount3 cache")
