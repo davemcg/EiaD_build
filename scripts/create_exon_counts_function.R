@@ -103,7 +103,7 @@ create_count_data_frames <-
     
     #Add rownames back
     # TPM_data_frame <- TPM_data_frame %>% as_tibble(rownames = 'gene_id')
-    count_data_frame <- count_data_frame %>% as_tibble(rownames = 'gene_id')
+    count_data_frame <- count_data_frame %>% as_tibble(rownames = 'exon_id')
     #########################################
     
 
@@ -117,7 +117,8 @@ create_count_data_frames <-
     # TPM_data_frame_final <- TPM_data_frame %>% select(one_of(c("gene_id", TPM_data_frame_keep)))
     
     count_data_frame_keep <- intersect(names(count_data_frame), metadata$run_accession)
-    count_data_frame_final <- count_data_frame %>% select(one_of(c("gene_id", count_data_frame_keep)))
+    count_data_frame_final <- count_data_frame %>% select(one_of(c("exon_id", count_data_frame_keep))) %>% 
+      unique()
     #Create counts file
     system('mkdir -p exon_counts')
     # write_csv(TPM_data_frame_final, 
@@ -168,15 +169,15 @@ create_count_data_frames <-
     for (i in studies){
       #Subset data to ensure memory is not exhausted
       run_accessions = metadata %>% filter(study_accession == i, run_accession %in% colnames(count_data_frame_final)) %>% pull(run_accession)
-      counts_subset <- count_data_frame_final[, c("gene_id", run_accessions)]
+      counts_subset <- count_data_frame_final[, c("exon_id", run_accessions)]
       #Reformatting data for aggregation
-      long_counts_subset <- counts_subset %>% pivot_longer(-gene_id)
-      names(long_counts_subset) <- c("gene_id", "run_accession", "value")
+      long_counts_subset <- counts_subset %>% pivot_longer(-exon_id)
+      names(long_counts_subset) <- c("exon_id", "run_accession", "value")
       #Joining metadata for aggregation
       long_counts_meta <- long_counts_subset %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
                                                            by = c('run_accession'))
       dt_long_counts <- data.table(long_counts_meta)
-      long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(gene_id, sample_accession)]
+      long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(exon_id, sample_accession)]
       
       long_count_data_list[[i]] <- long_counts_srs
     }
