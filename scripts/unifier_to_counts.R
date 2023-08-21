@@ -5,7 +5,7 @@ library(recount3)
 library(dtplyr)
 library(data.table)
 
-source("~/git/EiaD_build/scripts/create_count_data_function.R")
+source("~/git/EiaD_build/scripts/deprecated/create_exon_counts_function.R")
 
 # Importing Metadata
 #eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
@@ -23,8 +23,6 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                            "SRP098761", "SRP105756", "SRP106457", "SRP108292", "SRP110135", "SRP111145",
                            "SRP115908", "SRP117613", "SRP119291", "SRP119766", "SRP151763", "SRP159246",
                            "ERP022243", "SRP186009", "SRP156453", "SRP136195"),
-                         "recount3_TPM",
-                         "long_recount3_TPM",
                          "recount3_count",
                          "long_recount3_count",
                          "recount3_mapping_information",
@@ -39,8 +37,7 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                            "THYROID", "LUNG", "SPLEEN", "PANCREAS", "ESOPHAGUS", "STOMACH", "COLON",
                            "SMALL_INTESTINE", "PROSTATE", "TESTIS", "NERVE", "PITUITARY", "BLOOD",
                            "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
-                         "GTEX_TPM",
-                         "long_GTEX_TPM",
+
                          "GTEX_count",
                          "long_GTEX_count",
                          "gtex_mapping_information",
@@ -51,11 +48,9 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
 
 
 create_count_data_frames("~/data/eiad_rse/rse/",
-                         emeta %>% filter(data_location == 'local') %>% pull(study_accession) %>% unique(),
-                         "local_TPM",
-                         "long_local_TPM",
-                         "local_count",
-                         "long_local_count",
+                         emeta %>% filter(data_location == 'local') %>% pull(study_accession) %>% unique() %>% head(4),
+                         "local_exon_count",
+                         "long_local_exon_count",
                          "local_mapping_information",
                          emeta, 
                          empty_cache = FALSE, 
