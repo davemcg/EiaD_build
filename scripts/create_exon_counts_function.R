@@ -55,11 +55,11 @@ create_count_data_frames <-
           # rse_gene_TPM <- rse_gene_TPM[,-1, drop=FALSE]
           # TPM_data_list[[i]] <- rse_gene_TPM
           # extract raw counts
-          rse_gene_counts <- assays(rse_gene)$raw_counts %>% data.frame()
-          rse_gene_counts <- rownames_to_column(rse_gene_counts, var = "gene_id")
-          row.names(rse_gene_counts) <- rse_gene_counts$gene_id
-          rse_gene_counts <- rse_gene_counts[,-1, drop=FALSE]
-          counts_data_list[[i]] <- rse_gene_counts
+          rse_exon_counts <- assays(rse_gene)$raw_counts %>% data.frame()
+          rse_exon_counts <- rownames_to_column(rse_exon_counts, var = "gene_id")
+          row.names(rse_exon_counts) <- rse_exon_counts$gene_id
+          rse_exon_counts <- rse_exon_counts[,-1, drop=FALSE]
+          counts_data_list[[i]] <- rse_exon_counts
           #extract mapping data
           mapping_data <- colData(rse_gene) %>% as.data.frame()
           mapping_data <- mapping_data %>% mutate(across(everything(), as.character))
@@ -119,11 +119,11 @@ create_count_data_frames <-
     count_data_frame_keep <- intersect(names(count_data_frame), metadata$run_accession)
     count_data_frame_final <- count_data_frame %>% select(one_of(c("gene_id", count_data_frame_keep)))
     #Create counts file
-    system('mkdir -p gene_counts')
+    system('mkdir -p exon_counts')
     # write_csv(TPM_data_frame_final, 
-    #           file = paste0("gene_counts/", TPM_matrix_file, ".csv.gz"))
+    #           file = paste0("exon_counts/", TPM_matrix_file, ".csv.gz"))
     write_csv(count_data_frame_final, 
-              file = paste0("gene_counts/", count_matrix_file, ".csv.gz"))
+              file = paste0("exon_counts/", count_matrix_file, ".csv.gz"))
     #Create mapping file
     system('mkdir -p mapping_data')
     mapping_data_frame <- bind_rows(mapping_data_list)
@@ -157,7 +157,7 @@ create_count_data_frames <-
     # long_TPM <- long_TPM_data_list %>% bind_rows() %>% unique()
     # #Create aggregated counts file
     # write_csv(long_TPM,
-    #           file = paste0("gene_counts/", long_TPM_matrix_file, ".csv.gz"))
+    #           file = paste0("exon_counts/", long_TPM_matrix_file, ".csv.gz"))
     # #############################################################################
     
     
@@ -185,6 +185,6 @@ create_count_data_frames <-
     long_count <- long_count_data_list %>% bind_rows() %>% unique()
     #Create aggregated counts file
     write_csv(long_count,
-              file = paste0("gene_counts/", long_count_matrix_file, ".csv.gz"))
+              file = paste0("exon_counts/", long_count_matrix_file, ".csv.gz"))
     ######################################################################################
   }
