@@ -55,10 +55,10 @@ create_count_data_frames <-
           # rse_gene_TPM <- rse_gene_TPM[,-1, drop=FALSE]
           # TPM_data_list[[i]] <- rse_gene_TPM
           # extract raw counts
-          rse_exon_counts <- assays(rse_gene)$raw_counts %>% data.frame()
-          rse_exon_counts <- rownames_to_column(rse_exon_counts, var = "gene_id")
-          row.names(rse_exon_counts) <- rse_exon_counts$gene_id
-          rse_exon_counts <- rse_exon_counts[,-1, drop=FALSE]
+          rse_exon_counts <- assays(rse_gene)$raw_counts 
+          #rse_exon_counts <- as_tibble(rse_exon_counts, rownames = "gene_id")
+          #row.names(rse_exon_counts) <- rse_exon_counts$gene_id
+          #rse_exon_counts <- rse_exon_counts[,-1, drop=FALSE]
           counts_data_list[[i]] <- rse_exon_counts
           #extract mapping data
           mapping_data <- colData(rse_gene) %>% as.data.frame()
@@ -122,6 +122,7 @@ create_count_data_frames <-
     system('mkdir -p exon_counts')
     # write_csv(TPM_data_frame_final, 
     #           file = paste0("exon_counts/", TPM_matrix_file, ".csv.gz"))
+    
     write_csv(count_data_frame_final, 
               file = paste0("exon_counts/", count_matrix_file, ".csv.gz"))
     #Create mapping file
