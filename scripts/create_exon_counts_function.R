@@ -106,7 +106,7 @@ create_count_data_frames <-
     count_data_frame <- count_data_frame %>% as_tibble(rownames = 'exon_id')
     #########################################
     
-
+    
     
     #########################################
     #filter matrix to only samples in our metadata
@@ -132,61 +132,63 @@ create_count_data_frames <-
     write_csv(mapping_data_frame, 
               file = paste0("mapping_data/", mapping_file_name, ".csv.gz"))
     
-    ######################################
-    # Make long
-    #Obtain study names so data can be subset during aggregation
-    studies <- metadata %>% filter(run_accession %in% colnames(count_data_frame_final)) %>% pull(study_accession) %>% unique()
-    
-    # # make TPM long
-    # long_TPM_data_list <- list()
-    # for (i in studies){
-    #   #Subset data to ensure memory is not exhausted
-    #   run_accessions = metadata %>% filter(study_accession == i, run_accession %in% colnames(TPM_data_frame_final)) %>% pull(run_accession)
-    #   counts_subset <- TPM_data_frame_final[, c("gene_id", run_accessions)]
-    #   #Reformatting data for aggregation
-    #   long_counts_subset <- counts_subset %>% pivot_longer(-gene_id)
-    #   names(long_counts_subset) <- c("gene_id", "run_accession", "value")
-    #   #Joining metadata for aggregation
-    #   long_counts_meta <- long_counts_subset %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
-    #                                                        by = c('run_accession'))
-    #   dt_long_counts <- data.table(long_counts_meta)
-    #   long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(gene_id, sample_accession)]
-    #   
-    #   long_TPM_data_list[[i]] <- long_counts_srs
-    # }
-    # 
-    # #Bind rows to create aggregated count data frame
-    # long_TPM <- long_TPM_data_list %>% bind_rows() %>% unique()
-    # #Create aggregated counts file
-    # write_csv(long_TPM,
-    #           file = paste0("exon_counts/", long_TPM_matrix_file, ".csv.gz"))
-    # #############################################################################
-    
-    
-    ########################################################################################
-    # make count long
-    long_count_data_list <- list()
-    for (i in studies){
-      #Subset data to ensure memory is not exhausted
-      run_accessions = metadata %>% filter(study_accession == i, run_accession %in% colnames(count_data_frame_final)) %>% pull(run_accession)
-      counts_subset <- count_data_frame_final[, c("exon_id", run_accessions)]
-      #Reformatting data for aggregation
-      long_counts_subset <- counts_subset %>% pivot_longer(-exon_id)
-      names(long_counts_subset) <- c("exon_id", "run_accession", "value")
-      #Joining metadata for aggregation
-      long_counts_meta <- long_counts_subset %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
-                                                           by = c('run_accession'))
-      dt_long_counts <- data.table(long_counts_meta)
-      long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(exon_id, sample_accession)]
+    if (make_long){
+      ######################################
+      # Make long
+      #Obtain study names so data can be subset during aggregation
+      studies <- metadata %>% filter(run_accession %in% colnames(count_data_frame_final)) %>% pull(study_accession) %>% unique()
       
-      long_count_data_list[[i]] <- long_counts_srs
+      # # make TPM long
+      # long_TPM_data_list <- list()
+      # for (i in studies){
+      #   #Subset data to ensure memory is not exhausted
+      #   run_accessions = metadata %>% filter(study_accession == i, run_accession %in% colnames(TPM_data_frame_final)) %>% pull(run_accession)
+      #   counts_subset <- TPM_data_frame_final[, c("gene_id", run_accessions)]
+      #   #Reformatting data for aggregation
+      #   long_counts_subset <- counts_subset %>% pivot_longer(-gene_id)
+      #   names(long_counts_subset) <- c("gene_id", "run_accession", "value")
+      #   #Joining metadata for aggregation
+      #   long_counts_meta <- long_counts_subset %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
+      #                                                        by = c('run_accession'))
+      #   dt_long_counts <- data.table(long_counts_meta)
+      #   long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(gene_id, sample_accession)]
+      #   
+      #   long_TPM_data_list[[i]] <- long_counts_srs
+      # }
+      # 
+      # #Bind rows to create aggregated count data frame
+      # long_TPM <- long_TPM_data_list %>% bind_rows() %>% unique()
+      # #Create aggregated counts file
+      # write_csv(long_TPM,
+      #           file = paste0("exon_counts/", long_TPM_matrix_file, ".csv.gz"))
+      # #############################################################################
+      
+      
+      ########################################################################################
+      # make count long
+      long_count_data_list <- list()
+      for (i in studies){
+        #Subset data to ensure memory is not exhausted
+        run_accessions = metadata %>% filter(study_accession == i, run_accession %in% colnames(count_data_frame_final)) %>% pull(run_accession)
+        counts_subset <- count_data_frame_final[, c("exon_id", run_accessions)]
+        #Reformatting data for aggregation
+        long_counts_subset <- counts_subset %>% pivot_longer(-exon_id)
+        names(long_counts_subset) <- c("exon_id", "run_accession", "value")
+        #Joining metadata for aggregation
+        long_counts_meta <- long_counts_subset %>% left_join(metadata %>% as_tibble() %>% select(sample_accession, run_accession) %>% unique(),
+                                                             by = c('run_accession'))
+        dt_long_counts <- data.table(long_counts_meta)
+        long_counts_srs <- dt_long_counts[, .(value=mean(value)), by=list(exon_id, sample_accession)]
+        
+        long_count_data_list[[i]] <- long_counts_srs
+      }
+      
+      
+      #Bind rows to create aggregated count data frame
+      long_count <- long_count_data_list %>% bind_rows() %>% unique()
+      #Create aggregated counts file
+      write_csv(long_count,
+                file = paste0("exon_counts/", long_count_matrix_file, ".csv.gz"))
+      ######################################################################################
     }
-    
-    
-    #Bind rows to create aggregated count data frame
-    long_count <- long_count_data_list %>% bind_rows() %>% unique()
-    #Create aggregated counts file
-    write_csv(long_count,
-              file = paste0("exon_counts/", long_count_matrix_file, ".csv.gz"))
-    ######################################################################################
   }
