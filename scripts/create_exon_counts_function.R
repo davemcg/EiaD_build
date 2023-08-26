@@ -93,9 +93,10 @@ create_count_data_frames <-
       # colnames(TPM_data_frame) <- 
       #   ifelse(!grepl("GTEX", colnames(TPM_data_frame)), c(str_split(colnames(TPM_data_frame), '.+?(?=K.562)') %>% map(2) %>% unlist()),
       #          c(str_split(colnames(TPM_data_frame), '.+?(?=GTEX)') %>% map(2) %>% unlist()))
-      colnames(count_data_frame) <- 
-        ifelse(!grepl("GTEX", colnames(count_data_frame)), c(str_split(colnames(count_data_frame), '.+?(?=K.562)') %>% map(2) %>% unlist()),
-               c(str_split(colnames(count_data_frame), '.+?(?=GTEX)') %>% map(2) %>% unlist()))
+      #colnames(count_data_frame) <- 
+      #  ifelse(!grepl("GTEX", colnames(count_data_frame)), c(str_split(colnames(count_data_frame), '.+?(?=K.562)') %>% map(2) %>% unlist()),
+       #        c(str_split(colnames(count_data_frame), '.+?(?=GTEX)') %>% map(2) %>% unlist()))
+	   colnames(count_data_frame) <- gsub("-",".",  colnames(count_data_frame))
     } else {
       # remove name of study from column name
       # colnames(TPM_data_frame) <- colnames(TPM_data_frame) %>% gsub('.*\\.','',.)
