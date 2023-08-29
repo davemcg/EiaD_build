@@ -5,11 +5,11 @@ library(recount3)
 library(dtplyr)
 library(data.table)
 
-source("~/git/EiaD_build/scripts/deprecated/create_exon_counts_function.R")
+source("~/git/EiaD_build/scripts/create_exon_counts_function.R")
 
 # Importing Metadata
 #eyeIntegration22 <- read_csv("https://hpc.nih.gov/~parikhpp/EiaD/2022_metadata.csv", col_types = cols(...1 = col_skip()))
-emeta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% filter(study_accession != 'SRP273695') %>%  as_tibble()
+emeta <- data.table::fread('~/git/EiaD_build/data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% filter(study_accession != 'SRP273695') %>%  as_tibble()
 # emeta <- emeta %>% mutate(data_location = case_when(study_accession == 'SRP273695' ~ 'local',
 #                                                     TRUE ~ data_location))
 
@@ -31,20 +31,22 @@ create_count_data_frames("http://duffel.rail.bio/recount3/",
                          GTEX = FALSE)
 
 # OPTIONAL
-create_count_data_frames("http://duffel.rail.bio/recount3/",
-                         c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
+gtex_sets <- c("ADIPOSE_TISSUE", "MUSCLE", "BLOOD_VESSEL", "HEART", "OVARY", "UTERUS",
                            "VAGINA", "BREAST", "SKIN", "SALIVARY_GLAND", "BRAIN", "ADRENAL_GLAND",
                            "THYROID", "LUNG", "SPLEEN", "PANCREAS", "ESOPHAGUS", "STOMACH", "COLON",
                            "SMALL_INTESTINE", "PROSTATE", "TESTIS", "NERVE", "PITUITARY", "BLOOD",
-                           "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW"),
+                           "LIVER", "KIDNEY",   "CERVIX_UTERI", "FALLOPIAN_TUBE", "BLADDER", "BONE_MARROW")
+for (i in gtex_sets){
 
-                         "GTEX_count",
-                         "long_GTEX_count",
-                         "gtex_mapping_information",
+	create_count_data_frames("http://duffel.rail.bio/recount3/",
+                         i,
+                         paste0("GTEX_count__", i),
+                         paste0("long_GTEX_count__", i),
+                         paste0("gtex_mapping_information__", i),
                          emeta, 
                          empty_cache = FALSE,
-                         GTEX = TRUE)
-
+                         GTEX = TRUE, make_long = FALSE)
+}
 
 
 create_count_data_frames("~/data/eiad_rse/rse/",
