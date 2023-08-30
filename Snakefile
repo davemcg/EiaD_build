@@ -109,23 +109,42 @@ rule trim_fastq_pe:
 		fastp --thread {threads} -i {input.r1} -I {input.r2} -o {output.r1} -O {output.r2}
 		"""
 
-rule download_salmon_index:
-	input:
-		url = config['refgenie_url']	
+rule download_references:
 	output:
-		directory('default')
+		tx = config['annotation_path'] + 'gencode.v' + config['gencode_version'] + '.transcripts.fa.gz',
+		genome_fa = config['annotation_path'] + config['genome']
+	params:
+		fasta_transcripts = 'gencode.v' + config['gencode_version'] + '.transcripts.fa.gz',
+		genome_fa = config['genome'],
+		ftp = config['ftp'] + config['gencode_version'] + '/'
+	shell:
+		"""
+		rsync -av {params.ftp}{params.fasta_transcripts} {config[annotation_path]}
+		rsync -av {params.ftp}{params.genome_fa} {config[annotation_path]}
+		"""
+		
+rule salmon_index:
+	input:
+		tx = config['annotation_path'] + 'gencode.v' + config['gencode_version'] + '.transcripts.fa.gz',
+		genome = config['annotation_path'] + config['genome']
+	output:
+		directory(config['annotation_path'] + 'salmon_index_gencode.v' + config['gencode_version'] + '_salmon')
+	threads: 16
 	conda: 'eiad_rna_quant.yaml'
 	shell:
 		"""
-		wget -O index.tgz {input}
-		tar -xzvf index.tgz
-		rm index.tgz
+		grep "^>" <( gunzip -c {input.genome} ) | cut -d " " -f 1 > decoys.txt
+		sed -i.bak -e 's/>//g' decoys.txt
+		cat {input} > gentrome.fa.gz
+		salmon index -t gentrome.fa.gz \
+			-d decoys.txt \
+			-p {threads} -i {output} -k 31
 		"""
 
 rule salmon_quant:
 	input:
 		fq_files = lambda wildcards: return_fq(wildcards.sample),
-		index = 'default'
+		index = config['annotation_path'] + 'salmon_index_gencode.v' + config['gencode_version'] + '_salmon'
 	output:
 		'salmon_quant/{sample}/quant.sf'
 	params:

@@ -13,6 +13,12 @@
 		"partition" : "quick",
 		"time" : "04:00:00",
 		"mem" : "32g"
+	}, 
+	"salmon_index" :
+	{
+		"partition" : "quick",
+		"time" : "04:00:00",
+		"mem" : "32g"
 	},
 	"make_counts" :
 	{
