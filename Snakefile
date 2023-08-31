@@ -177,6 +177,7 @@ rule make_counts:
 		'counts/gene_counts.csv.gz'
 	params: config['R_make_counts_path']
 	conda: 'eiad_rna_quant_r.yaml'
+	threads: 20
 	shell:
 		"""
 		Rscript {params}

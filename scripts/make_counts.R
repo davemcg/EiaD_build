@@ -31,25 +31,18 @@ run_meta <- run_meta %>%
 			relocate(log, align_perc)
 print('two')
 # pull anno
-anno <- readDNAStringSet("default/gentrome.fa") %>% names() %>% enframe()
-anno2 <- anno %>% 
-			mutate(gene_symbol = str_extract(value, 'gene_symbol:\\w+') %>% gsub(".*:","",.),
-				   transcript_id = str_extract(value, 'ENST\\d+\\.\\d+'),
-				   gene_id = str_extract(value, 'ENSG\\d+\\.\\d+'),
-				   gene_biotype = str_extract(value, 'gene_biotype:\\w+') %>% gsub(".*:","",.),
-				   transcript_biotype = str_extract(value, 'transcript_biotype:\\w+') %>% gsub(".*:","",.),
-				   description = str_extract(value, "description:.*")) %>%
-			mutate(Gene = paste0(gene_symbol, ' (', gene_id, ')')) 
-		
-
 salmon_anno  <- fread(files[1])
-salmon_anno2 <- salmon_anno %>% left_join(anno2, by = c('Name' = 'transcript_id')) %>% 
-					select(target_id = Name, Gene) %>%
-					mutate(Gene = case_when(is.na(Gene) ~ target_id,
-											TRUE ~ Gene))
+salmon_anno2 <- salmon_anno %>% 
+					separate(Name,into = c('transcript_id','gene_id','havana_gene',
+											'havana_transcript','transcript_name',
+											'gene_name','length','type','empty'), 
+								sep = '\\|', remove = FALSE) 
+
+salmon_tx2gene <- salmon_anno2 %>% dplyr::select(Name, gene_id)
+
 # import
-txi <- tximport(files, type = "salmon", tx2gene = salmon_anno2)
-txi_tx <- tximport(files, type = "salmon", tx2gene = salmon_anno2, txOut = TRUE)
+txi <- tximport(files, type = "salmon", tx2gene = salmon_tx2gene)
+txi_tx <- tximport(files, type = "salmon", tx2gene = salmon_tx2gene, txOut = TRUE)
 # extract counts
 puller <- function(txi_object, slot = 'counts', ncolnames = gsub('salmon_quant|\\/|quant\\.sf', '', files)){
 	out <- txi_object[[slot]]
@@ -64,6 +57,7 @@ tx_counts <- puller(txi_tx, 'counts')
 tx_TPM <- puller(txi_tx, 'abundance')
 
 system('mkdir -p counts')
+write_csv(salmon_anno2 %>% as_tibble(), file = 'counts/gene_anno.csv.gz')
 write_csv(gene_counts %>% as_tibble(rownames = 'Gene'), file = 'counts/gene_counts.csv.gz')
 write_csv(gene_TPM %>% as_tibble(rownames = 'Gene'), file = 'counts/gene_tpm.csv.gz')
 write_csv(tx_counts %>% as_tibble(rownames = 'Transcript'), file = 'counts/tx_counts.csv.gz')
