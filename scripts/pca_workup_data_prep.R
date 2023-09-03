@@ -5,7 +5,7 @@ library(metamoRph)
 # Load in file containing samples to remove from PCA analysis
 excluded_samples <- scan("data/excluded_samples.txt", what = "character")
 # Load in metadata
-emeta <- data.table::fread('data/eyeIntegration23_meta_2023_08_28.csv.gz') %>% 
+emeta <- data.table::fread('data/eyeIntegration23_meta_2023_09_01.csv.gz') %>% 
   filter(!sample_accession %in% excluded_samples) %>% as_tibble()
 ##################
 
@@ -44,15 +44,16 @@ gene_count_meta <- colnames(sample_mat) %>%
 # up to 50 per tissue
 # the hope is not have the change this much
 # but to simply project new data onto it
-set.seed(2023-08-18)
-core_set <- gene_count_meta %>% 
-  filter(!grepl("AMD", Perturbation )) %>% 
-  group_by(Tissue) %>% 
-  sample_n(50, replace = TRUE) %>% 
-  unique() %>% 
-  pull(sample_accession)
+# set.seed(2023-08-18)
+# core_set <- gene_count_meta %>% 
+#   filter(!grepl("AMD", Perturbation )) %>% 
+#   group_by(Tissue) %>% 
+#   sample_n(50, replace = TRUE) %>% 
+#   unique() %>% 
+#   pull(sample_accession)
 
-write(core_set, file  = '../data/core_pca_samples.txt')
+# write(core_set, file  = '../data/core_pca_samples.txt')
+core_set <- scan('../data/core_pca_samples.txt', what='character')
 #####################################
 
 #####################################

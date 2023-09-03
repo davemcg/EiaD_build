@@ -4,20 +4,19 @@ library(tidyverse)
 library(data.table)
 library(matrixStats)
 
-# load metadata and filter to common eye  samples
-meta <- data.table::fread('data/eyeIntegration22_meta_2023_03_03.csv.gz') %>% 
+# load metadata and filter to common eye  samplese
+meta <- data.table::fread('data/eyeIntegration23_meta_2023_09_01.csv.gz') %>% 
   filter(Cohort == "Eye",
          Tissue %in% c("Conjunctiva", "Cornea","Lens", "RPE","Retina", "Trabecular Meshwork")) %>% 
   filter(!grepl("AMD", Perturbation)) %>% 
   select(sample_accession:study_title,Source_details ) %>% 
+  mutate(sample_accession = gsub("^1","X1",sample_accession),
+         sample_accession = gsub("-",".",sample_accession)) %>% 
+  
   unique()
 # load count data for eyeIntegration
 
 gene_counts <- vroom::vroom("counts/gene_counts.csv.gz") %>% data.frame() %>% 
-  filter(!grepl("ENST", Gene)) %>% 
-  mutate(Gene = gsub(" \\(.*","",Gene)) %>% 
-  group_by(Gene) %>% 
-  summarise_all(sum) %>% 
   column_to_rownames("Gene")
 
 sample_frac <- 0.1
@@ -130,5 +129,5 @@ predictions <- predictions %>% select(-predict) %>%
 
 
 
-write_tsv(predictions, 'data/2023_08_12_ML_tissue_predictions.tsv.gz')
-write_tsv(calls, 'data/2023_08_12_ML_tissue_values.tsv.gz')
+write_tsv(predictions, 'data/2023_09_01_ML_tissue_predictions.tsv.gz')
+write_tsv(calls, 'data/2023_09_01_ML_tissue_values.tsv.gz')

@@ -1,6 +1,6 @@
 library(tidyverse)
-svg(filename = '2023_counts.02.svg', width = 18, height = 12)
-emeta <- data.table::fread("~/git/EiaD_build/data/eyeIntegration23_meta_2023_08_28.built.csv.gz")
+svg(filename = '2023_counts.03.svg', width = 18, height = 12)
+emeta <- data.table::fread("~/git/EiaD_build/data/eyeIntegration23_meta_2023_09_01.built.csv.gz")
 
 a <- emeta %>%
   as_tibble() %>%
@@ -67,4 +67,4 @@ b <- emeta %>%
 cowplot::plot_grid(a,b,nrow=1, rel_widths = c(1,0.6))
 dev.off()
 
-system("cp 2023_counts.02.svg ~/git/eyeIntegration_app/inst/app/www/2023/")
+system("cp 2023_counts.03.svg ~/git/eyeIntegration_app/inst/app/www/2023/")

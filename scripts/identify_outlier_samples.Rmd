@@ -3,7 +3,7 @@ title: "Label Analysis"
 output: 
   html_notebook:
     author: "David McGaughey"
-    date: "2023-08-13"
+    date: "2023-09-01"
     theme: flatly
     toc: true
     toc_float: true
@@ -45,11 +45,11 @@ mat_all <- mat_all[,-1] %>% as.matrix()
 row.names(mat_all) <- genes
 mat_all[1:10,1:10]
 
-emeta <- data.table::fread('../data/eyeIntegration22_meta_2023_03_03.csv.gz')
+emeta <- data.table::fread('../data/eyeIntegration23_meta_2023_09_01.csv.gz')
 
 # from script/eigenProjecR_label.R
-predictions <- read_tsv('../data/2023_08_12_ML_tissue_predictions.tsv.gz')
-pred_values <- read_tsv('../data/2023_08_12_ML_tissue_values.tsv.gz')
+predictions <- read_tsv('../data/2023_09_01_ML_tissue_predictions.tsv.gz')
+pred_values <- read_tsv('../data/2023_09e_01_ML_tissue_values.tsv.gz')
 
 tissues <- c("Conjunctiva", "Cornea", "Lens", "Retina", "RPE", "Trabecular Meshwork")
 ```
