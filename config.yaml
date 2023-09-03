@@ -1,7 +1,6 @@
-sample_fastq_table: '/home/mcgaugheyd/git/EiaD_build/data/2023_03_03_snakemake_input.tsv'
+sample_fastq_table: '/home/mcgaugheyd/git/EiaD_build/data/2023_09_01_snakemake_input.tsv'
 fastq_dir: '/data/OGVFB_BG/EiaD_fastq'
 ftp: 'rsync://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_'
-tx: 'gencode.v35.pc_transcripts.fa.gz'
 gencode_version: '44'
 genome: 'GRCh38.primary_assembly.genome.fa.gz'
 annotation_path: 'reference/'
