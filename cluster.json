@@ -2,74 +2,26 @@
 	"__default__" :
 	{
 		"partition" : "quick",
-		"time" : "4:00:00",
+		"time" : "02:00:00",
 		"mem" : "8g",
+		"extra" : " --gres=lscratch:10",
 		"output"  : "00log/{rule}_{wildcards}.out",
-		"error" : "00log/{rule}_{wildcards}.err",
-		"extra" : "",
-		"job-name" : "{rule}.job"
+		"error" : "00log/{rule}_{wildcards}.err" 
 	},
-	"aggFastqsPE" :
+	"salmon_quant" :
 	{
-		"partition":"norm",
-		"time" : "4:00:00",
-		"mem" : "8g",
-		"output"  : "00log/{rule}_{wildcards}.out",
-		"error" : "00log/{rule}_{wildcards}.err",
-		"extra" : "",
-		"job-name" : "{rule}.job"
-
-	},
-	"build_salmon_index" :
+		"partition" : "quick",
+		"time" : "04:00:00",
+		"mem" : "32g"
+	}, 
+	"salmon_index" :
 	{
-		"mem" : "24g"
+		"partition" : "quick",
+		"time" : "04:00:00",
+		"mem" : "32g"
 	},
-	"rebuild_salmon_index" :
-	{
-		"mem" : "24g"
-	},
-	"run_salmon" :
-	{
-		"partition":"norm",
-		"time" : "16:00:00",
-		"mem" : "16g",
-		"cpus-per-task": "4"
-	},
-	"find_tx_low_usage" :
-	{
-		"mem" : "64g"
-	},
-	"re_run_Salmon" :
-	{
-		"partition":"norm",
-		"time" : "12:00:00",
-		"mem" : "16g",
-		"cpus-per-task": "8"
-	},
-	"gene_quantification_and_normalization" :
+	"make_counts" :
 	{
 		"mem" : "128g"
-	},
-	"calculate_mean_rank_decile" :
-	{
-		"mem" : "128g"
-	},
-	"GO_term_enrichment" :
-	{
-		"partition" : "norm",
-		"time" : "12:00:00",
-		"mem" : "200g"
-	},
-	"make_SQLite_db" :
-	{
-		"mem" : "64g"
-	},
-	"tSNE" :
-	{
-		"mem" : "64g"
-	},
-	"differential_expression" :
-	{
-		"mem" : "64g"
 	}
 }
