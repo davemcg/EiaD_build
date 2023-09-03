@@ -6,12 +6,11 @@ library(rtracklayer)
 library(dtplyr)
 library(Biostrings)
 library(metamoRph)
-gene_pool_2023 <- dbConnect(RSQLite::SQLite(), dbname = "~/git/eyeIntegration_app/inst/app/www/2023/eyeIntegration_2023_human_counts.sqlite")
+gene_pool_2023 <- dbConnect(RSQLite::SQLite(), dbname = "eyeIntegration_2023_human_counts.sqlite")
 
 #Load necessary files
-eyeIntegration23 <- data.table::fread("~/git/EiaD_build/data/eyeIntegration23_meta_2023_08_28.csv.gz") %>% 
-  as_tibble() %>%
-  dplyr::rename(Age_Years = age_number) %>% 
+eyeIntegration23 <- data.table::fread("~/git/EiaD_build/data/eyeIntegration23_meta_2023_09_01.csv.gz") %>% 
+  as_tibble() %>% 
   mutate(Sex = case_when(study_accession == 'SRP012682' & grepl("female", sample_title) ~ 'female',
                          study_accession == 'SRP012682' & grepl(" male", sample_title) ~ 'male',
                          TRUE ~ Sex)) %>% 
@@ -31,7 +30,7 @@ eyeIntegration23 <- eyeIntegration23 %>%
   left_join(sex_labels %>% dplyr::select(sample_accession = sample_id, Sex_ML = predict, Sex_Score = max_score))
 ##################### 
 # output new meta
-write_csv(eyeIntegration23, file= 'data/eyeIntegration23_meta_2023_08_28.built.csv.gz')
+write_csv(eyeIntegration23, file= 'data/eyeIntegration23_meta_2023_09_01.built.csv.gz')
 
 #####################################################
 mapping_data <- vroom::vroom("run_meta.csv.gz") %>% mutate(sample_accession = gsub('salmon_quant\\/|\\/aux_info\\/meta_info.json','',log)) %>% relocate(sample_accession) %>% select(-log)
@@ -156,7 +155,7 @@ dbWriteTable(gene_pool_2023, 'tx_IDs', tx_annotation %>% filter(Transcript %in% 
 db_create_index(gene_pool_2023, 'tx_IDs', 'ID')
 
 excluded_samples <- scan("data/excluded_samples.txt", what = "character")
-dbWriteTable(gene_pool_2023, 'sample_outliers', excluded_samples %>% enframe() %>% select(outlier = value))
+dbWriteTable(gene_pool_2023, 'sample_outliers', excluded_samples %>% enframe() %>% select(outlier = value), overwrite = TRUE)
 
 dbWriteTable(gene_pool_2023, 'Date_DB_Created', Sys.Date() %>% as.character() %>% enframe(name = NULL) %>% 
                select(DB_Created = value), row.names = FALSE, overwrite=TRUE)
