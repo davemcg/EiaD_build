@@ -27,7 +27,7 @@ mm_pca <- metamoRph::metamoRph(gene_mat, gtex_sex$PCA$rotation, gtex_sex$center_
 sex_labels <- metamoRph::model_apply(list_of_models = sex_model, 
                                      experiment_data = mm_pca)
 eyeIntegration23 <- eyeIntegration23 %>% 
-  left_join(sex_labels %>% dplyr::select(sample_accession = sample_id, Sex_ML = predict, Sex_Score = max_score))
+  left_join(sex_labels %>% dplyr::select(sample_accession = sample_id, Sex_ML = predict, Sex_Score = max_score), by = c("sample_accession"))
 ##################### 
 # output new meta
 write_csv(eyeIntegration23, file= 'data/eyeIntegration23_meta_2023_09_01.built.csv.gz')
