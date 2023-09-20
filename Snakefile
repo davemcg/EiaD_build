@@ -9,9 +9,9 @@ sample_run_setup = config['sample_fastq_table']
 # format of study_fq_tsv
 # tab separated
 # setup is either "paired" or "single"
-# header of: study_id	sample_id	setup
+# header of: sample_accession	run_accession	setup
 # example line:
-# zander	D3C_D0_1__HJLT7DSX3_19270591_S73_L002	paired
+# D3C_D0	D3C_D0_1__HJLT7DSX3_19270591_S73_L002	paired
 for line in open(sample_run_setup):
 	if len(line.split('\t')) != 3:
 		sys.exit(print('\n****************\nONLY ' + str(len(line.split())) + \
@@ -55,17 +55,19 @@ def salmon_input_maker(prefix):
 		out.append('-2 ' + fq_dir + '/' + prefix + config['fq2_suffix'])
 	return(out)
 
-	
+suffixes = [config['fq1_suffix'], config['fq2_suffix'], config['fqS_suffix']]
 
 wildcard_constraints:
 	run = '|'.join(run_files),
-	sample = '|'.join(sample_files)
+	sample = '|'.join(sample_files),
+	suffix = '|'.join(suffixes)
 
 SALMON_QUANT_OUTPUT = ['salmon_quant/' + sample + '/quant.sf'  \
 	for sample in sample_files] 
 	
 
 localrules: all, print_quants
+#print(sample_run_dict)
 
 rule all:
 	input:
@@ -77,7 +79,7 @@ rule aggregate_fq:
 	input:
 		lambda wildcards: expand(fq_dir + '/{run}{{suffix}}', run = sample_run_dict[wildcards.sample])
 	output:
-		fq_dir + '/{sample}{suffix}'
+		temp(fq_dir + '/{sample}{suffix}')
 	shell:
 		"""
 		cat {input} > {output}
