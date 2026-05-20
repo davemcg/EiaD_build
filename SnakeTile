@@ -1,0 +1,69 @@
+import os
+import glob
+import pyBigWig
+
+# --- Configuration ---
+BW_DIR = "bigwig"
+DB_URI = os.path.abspath("tiledb_cpm_database")
+MAX_COORD = 2147483646
+
+# Discover files and map samples
+bw_files = glob.glob(os.path.join(BW_DIR, "*.bw")) + glob.glob(os.path.join(BW_DIR, "*.bigWig"))
+SAMPLE_TO_PATH = {os.path.splitext(os.path.basename(f))[0]: f for f in bw_files}
+SAMPLES = sorted(list(SAMPLE_TO_PATH.keys()))
+
+# Get chromosomes from the first file
+if bw_files:
+    with pyBigWig.open(bw_files[0]) as bw:
+        CHROMS = list(bw.chroms().keys())
+else:
+    CHROMS = []
+
+# --- Rules ---
+rule all:
+    input:
+        expand(os.path.join(DB_URI, "{chrom}", "__consolidated.flag"), chrom=CHROMS)
+
+localrules: setup_schema
+
+rule setup_schema:
+    output:
+        sample_map = os.path.join(DB_URI, "sample_map.json"),
+        flag = os.path.join(DB_URI, ".flags", "schema.done")
+    params:
+        db_uri = DB_URI,
+        chroms = CHROMS,
+        samples = SAMPLES,
+        max_coord = MAX_COORD
+    script:
+        "scripts/setup_schema.py"
+
+rule ingest_sample:
+    input:
+        schema_flag = os.path.join(DB_URI, ".flags", "schema.done"),
+        sample_map_file = os.path.join(DB_URI, "sample_map.json")
+    output:
+        flag = os.path.join(DB_URI, ".flags", "{sample}.ingested")
+    params:
+        file_path = lambda wildcards: SAMPLE_TO_PATH[wildcards.sample],
+        db_uri = DB_URI
+    threads: 2
+    resources:
+        runtime=60,
+        mem_mb=8000
+    script:
+        "scripts/ingest_sample.py"
+
+rule consolidate:
+    input:
+        ingest_flags = expand(os.path.join(DB_URI, ".flags", "{sample}.ingested"), sample=SAMPLES)
+    output:
+        flag = os.path.join(DB_URI, "{chrom}", "__consolidated.flag")
+    params:
+        db_uri = DB_URI
+    threads: 8
+    resources:
+        runtime=180,
+        mem_mb=32000
+    script:
+        "scripts/consolidate.py"
