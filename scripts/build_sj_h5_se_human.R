@@ -25,7 +25,7 @@ BPPARAM <- if (.Platform$OS.type == "windows") {
   BiocParallel::MulticoreParam(workers = 16)
 }
 
-cache_dir <- "se_objects/human_junctions_se.20261007"
+cache_dir <- "counts/se_sj_human.20261007.hdf5"
 
 # ---- 1. Parse all SJ.out.tab in parallel -------------------------------------
 read_sj <- function(p) {
