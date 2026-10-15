@@ -37,37 +37,45 @@ fc_files      <- fc_files[existing_mask]
 nmeta_filter  <- nmeta_filter[existing_mask, ]
 
 # ---------------------------------------------------------
-# 2. Load exon count matrices & build unique feature IDs
+# 2. Load exon count matrices, format coordinates & deduplicate
 # ---------------------------------------------------------
 # Read feature metadata from first file
 fc_meta <- data.table::fread(fc_files[1]) %>% 
   dplyr::select(Geneid, Chr, Start, End, Strand, Length)
 
-# Create unique row key combining exon ID and coordinates
-fc_meta <- fc_meta %>% 
-  dplyr::mutate(exon_uid = paste(Geneid, Chr, Start, End, Strand, sep = ":"))
+# Create pure coordinate row names without ENSE prefix (e.g. "chr1:100-200:+")
+exon_coords <- paste0(fc_meta$Chr, ":", fc_meta$Start, "-", fc_meta$End, ":", fc_meta$Strand)
 
-# Extract count column (col 7) from all sample files
+# Identify unique coordinate indices to eliminate duplicates
+keep_idx <- !duplicated(exon_coords)
+
+# Clean feature metadata and coordinates
+fc_meta_clean     <- fc_meta[keep_idx, ]
+exon_coords_clean <- exon_coords[keep_idx]
+
+# Extract count column (col 7) and subset non-duplicate rows per sample
 register(MulticoreParam(workers = 8))
 
 counts_list <- bplapply(fc_files, function(f) {
   data.table::setDTthreads(1)
-  data.table::fread(f, select = 7)[[1]]
+  data.table::fread(f, select = 7)[[1]][keep_idx]
 })
 
 counts_mat <- do.call(cbind, counts_list)
 colnames(counts_mat) <- nmeta_filter$sample_accession
-rownames(counts_mat) <- fc_meta$exon_uid
+rownames(counts_mat) <- exon_coords_clean
 
 # ---------------------------------------------------------
-# 3. Load GTF Exon Annotations & align
+# 3. Load GTF Exon Annotations & align cleanly
 # ---------------------------------------------------------
+# Import GTF exon features, exclude NA exon IDs, and keep distinct entries
 gtf_exons <- rtracklayer::import(gtf_path, feature.type = "exon") %>% 
   as_tibble() %>% 
+  dplyr::filter(!is.na(exon_id)) %>% 
   dplyr::distinct(exon_id, .keep_all = TRUE)
 
-# Left join ensures row ordering of counts_mat is strictly preserved
-exons_ordered <- fc_meta %>% 
+# Left join preserves unique fc_meta_clean row order and count
+exons_ordered <- fc_meta_clean %>% 
   dplyr::left_join(gtf_exons, by = c("Geneid" = "exon_id"))
 
 # ---------------------------------------------------------
