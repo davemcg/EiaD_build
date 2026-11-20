@@ -27,6 +27,7 @@ mm_pca <- metamoRph::metamoRph(gene_mat, gtex_sex$PCA$rotation, gtex_sex$center_
 sex_labels <- metamoRph::model_apply(list_of_models = sex_model, 
                                      experiment_data = mm_pca)
 eyeIntegration23 <- eyeIntegration23 %>% 
+  select(-Sex_Score) %>% 
   left_join(sex_labels %>% dplyr::select(sample_accession = sample_id, Sex_ML = predict, Sex_Score = max_score), by = c("sample_accession"))
 ##################### 
 # output new meta
